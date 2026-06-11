@@ -290,6 +290,7 @@
         <div class="section-tabs">
           <button class="stab active" onclick="switchTab('jogos')">⚽ Jogos e Resultados</button>
           <button class="stab" onclick="switchTab('usuarios')">👥 Participantes</button>
+          <button class="stab" onclick="switchTab('palpites')">📋 Palpites do Pessoal</button>
           <button class="stab" onclick="switchTab('pontuacao')">📊 Regras de Pontuação</button>
         </div>
         <div class="stab-panel active" id="stab-jogos">
@@ -297,6 +298,9 @@
         </div>
         <div class="stab-panel" id="stab-usuarios">
           <div class="loading"><div class="spinner"></div><br>Carregando participantes...</div>
+        </div>
+        <div class="stab-panel" id="stab-palpites">
+          <div class="loading"><div class="spinner"></div><br>Carregando...</div>
         </div>
         <div class="stab-panel" id="stab-pontuacao">
           ${renderPontuacaoLegenda()}
@@ -306,12 +310,13 @@
 
     function switchTab(tab) {
       document.querySelectorAll('.stab').forEach((b, i) => {
-        const tabs = ['jogos', 'usuarios', 'pontuacao'];
+        const tabs = ['jogos', 'usuarios', 'palpites', 'pontuacao'];
         b.classList.toggle('active', tabs[i] === tab);
       });
       document.querySelectorAll('.stab-panel').forEach(p => p.classList.remove('active'));
       document.getElementById(`stab-${tab}`).classList.add('active');
       if (tab === 'usuarios') carregarUsuarios();
+      if (tab === 'palpites') carregarPalpitesAdmin();
     }
 
     // ── JOGOS ─────────────────────────────────────────────────────────────────
@@ -565,6 +570,168 @@
             <tbody>${rows}</tbody>
           </table>
         </div>`;
+    }
+
+    // ── PALPITES DO PESSOAL ───────────────────────────────────────────────────
+    async function carregarPalpitesAdmin() {
+      const el = document.getElementById('stab-palpites');
+      el.innerHTML = '<div class="loading"><div class="spinner"></div><br>Carregando...</div>';
+
+      const [{ data: jogos }, { data: perfis }, { data: palpites }] = await Promise.all([
+        sb.schema('app_bolao').from('jogos').select('*').eq('ativo', true).order('fase').order('rodada').order('data_hora'),
+        sb.schema('app_bolao').from('perfis').select('id, nome, email').eq('ativo', true).order('nome'),
+        sb.schema('app_bolao').from('palpites').select('*').eq('ativo', true)
+      ]);
+
+      if (!jogos || !perfis || !palpites) {
+        el.innerHTML = '<div class="loading">Erro ao carregar dados.</div>';
+        return;
+      }
+
+      // Mapas para acesso rápido
+      const jogoMap = {};
+      jogos.forEach(j => jogoMap[j.id] = j);
+      const perfilMap = {};
+      perfis.forEach(p => perfilMap[p.id] = p);
+
+      // Mapa de palpites: palpiteMap[jogo_id][usuario_id]
+      const palpiteMap = {};
+      palpites.forEach(p => {
+        if (!palpiteMap[p.jogo_id]) palpiteMap[p.jogo_id] = {};
+        palpiteMap[p.jogo_id][p.usuario_id] = p;
+      });
+
+      el.innerHTML = `
+        <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="btnVerPorJogo" onclick="mostrarPorJogo()">Por Jogo</button>
+          <button class="btn btn-outline" id="btnVerPorJogador" onclick="mostrarPorJogador()">Por Participante</button>
+        </div>
+        <div id="palpitesConteudo"></div>`;
+
+      // Armazena dados globalmente para uso nas funções de view
+      window._adm = { jogos, perfis, palpiteMap, jogoMap, perfilMap };
+      mostrarPorJogo();
+    }
+
+    function mostrarPorJogo() {
+      document.getElementById('btnVerPorJogo').className = 'btn btn-primary';
+      document.getElementById('btnVerPorJogador').className = 'btn btn-outline';
+      const { jogos, perfis, palpiteMap } = window._adm;
+      const FASES = { grupos:'Grupos', oitavas:'Oitavas', quartas:'Quartas', semi:'Semifinal', terceiro_lugar:'3º Lugar', final:'Final' };
+      const fasesOrdem = ['grupos','oitavas','quartas','semi','terceiro_lugar','final'];
+      const agora = new Date();
+
+      // Agrupa por fase
+      const porFase = {};
+      jogos.forEach(j => {
+        if (!porFase[j.fase]) porFase[j.fase] = [];
+        porFase[j.fase].push(j);
+      });
+
+      let html = '';
+      fasesOrdem.forEach(fase => {
+        if (!porFase[fase]) return;
+        html += `<div class="card" style="margin-bottom:16px">
+          <div class="card-header">
+            <div class="card-title"><span class="fase-tag fase-${fase}">${FASES[fase]}</span></div>
+          </div>`;
+
+        porFase[fase].forEach(jogo => {
+          const dataFmt = new Date(jogo.data_hora).toLocaleString('pt-BR', { timeZone:'America/Sao_Paulo', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+          const finalizado = jogo.finalizado;
+          const resultadoHtml = finalizado
+            ? `<span class="result-display">${jogo.gols_a} × ${jogo.gols_b}</span>`
+            : `<span class="result-empty">Não lançado</span>`;
+
+          html += `<div style="border-bottom:1px solid #e2e8f0;padding:12px 20px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+              <span style="font-weight:700;font-size:14px">${traduzirNome(jogo.time_a)} × ${traduzirNome(jogo.time_b)}</span>
+              <span style="font-size:11px;color:#a0aec0">${dataFmt}</span>
+              ${resultadoHtml}
+            </div>
+            <table style="width:100%">
+              <thead><tr>
+                <th>Participante</th>
+                <th style="text-align:center">Palpite</th>
+                <th style="text-align:center">Pontos</th>
+              </tr></thead>
+              <tbody>`;
+
+          const palpitesJogo = palpiteMap[jogo.id] || {};
+          perfis.forEach(p => {
+            const pal = palpitesJogo[p.id];
+            const palpiteStr = pal ? `${pal.palpite_a} × ${pal.palpite_b}` : '<span style="color:#a0aec0;font-style:italic">Não palpitou</span>';
+            const ptsBadge = pal?.pontos != null
+              ? `<span class="pts-badge-lg pts-${pal.pontos >= 12 ? 12 : pal.pontos >= 9 ? 9 : pal.pontos >= 6 ? 6 : pal.pontos >= 3 ? 3 : 0}">${pal.pontos} pts</span>`
+              : '—';
+            html += `<tr>
+              <td><span style="font-weight:600">${p.nome || p.email}</span></td>
+              <td style="text-align:center;font-weight:700;color:#1d327b">${palpiteStr}</td>
+              <td style="text-align:center">${ptsBadge}</td>
+            </tr>`;
+          });
+
+          html += `</tbody></table></div>`;
+        });
+
+        html += `</div>`;
+      });
+
+      document.getElementById('palpitesConteudo').innerHTML = html || '<div class="loading">Nenhum dado.</div>';
+    }
+
+    function mostrarPorJogador() {
+      document.getElementById('btnVerPorJogo').className = 'btn btn-outline';
+      document.getElementById('btnVerPorJogador').className = 'btn btn-primary';
+      const { jogos, perfis, palpiteMap } = window._adm;
+      const FASES = { grupos:'Grupos', oitavas:'Oitavas', quartas:'Quartas', semi:'Semifinal', terceiro_lugar:'3º Lugar', final:'Final' };
+
+      let html = '';
+      perfis.forEach(perfil => {
+        // Conta palpites salvos
+        let totalSalvos = 0;
+        let totalPts = 0;
+        Object.values(palpiteMap).forEach(jogoPals => {
+          if (jogoPals[perfil.id]) { totalSalvos++; totalPts += jogoPals[perfil.id].pontos ?? 0; }
+        });
+
+        html += `<div class="card" style="margin-bottom:16px">
+          <div class="card-header">
+            <div class="card-title">👤 ${perfil.nome || perfil.email}</div>
+            <div style="display:flex;gap:12px;font-size:12px;color:#718096">
+              <span>📝 ${totalSalvos} palpites</span>
+              <span style="font-weight:700;color:#1d327b">🏆 ${totalPts} pts</span>
+            </div>
+          </div>
+          <table style="width:100%">
+            <thead><tr>
+              <th>Jogo</th>
+              <th style="text-align:center">Palpite</th>
+              <th style="text-align:center">Resultado</th>
+              <th style="text-align:center">Pontos</th>
+            </tr></thead>
+            <tbody>`;
+
+        jogos.forEach(jogo => {
+          const pal = (palpiteMap[jogo.id] || {})[perfil.id];
+          const palpiteStr = pal ? `${pal.palpite_a} × ${pal.palpite_b}` : '<span style="color:#a0aec0;font-style:italic">—</span>';
+          const resultadoStr = jogo.finalizado ? `${jogo.gols_a} × ${jogo.gols_b}` : '<span style="color:#a0aec0">—</span>';
+          const ptsBadge = pal?.pontos != null
+            ? `<span class="pts-badge-lg pts-${pal.pontos >= 12 ? 12 : pal.pontos >= 9 ? 9 : pal.pontos >= 6 ? 6 : pal.pontos >= 3 ? 3 : 0}">${pal.pontos} pts</span>`
+            : '—';
+          html += `<tr>
+            <td style="font-size:12px"><span style="font-weight:600">${traduzirNome(jogo.time_a)} × ${traduzirNome(jogo.time_b)}</span><br>
+              <span style="color:#a0aec0">${FASES[jogo.fase]} R${jogo.rodada}</span></td>
+            <td style="text-align:center;font-weight:700;color:#1d327b">${palpiteStr}</td>
+            <td style="text-align:center">${resultadoStr}</td>
+            <td style="text-align:center">${ptsBadge}</td>
+          </tr>`;
+        });
+
+        html += `</tbody></table></div>`;
+      });
+
+      document.getElementById('palpitesConteudo').innerHTML = html || '<div class="loading">Nenhum participante.</div>';
     }
 
     // ── LEGENDA PONTUAÇÃO ─────────────────────────────────────────────────────

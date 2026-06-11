@@ -395,15 +395,17 @@
       const agora = new Date();
 
       const { data: jogos } = await sb.schema('app_bolao').from('jogos')
-        .select('id, data_hora').in('id', jogoIds);
+        .select('id, data_hora, finalizado').in('id', jogoIds);
 
       let salvos = 0;
       let erros = 0;
 
       for (const jogo of jogos) {
-        if (agora >= new Date(jogo.data_hora)) continue;
+        // Bloqueia se já passou o horário OU se o jogo foi finalizado pelo admin
+        if (agora >= new Date(jogo.data_hora) || jogo.finalizado) continue;
         const pa = parseInt(document.getElementById(`pa-${jogo.id}`)?.value ?? 0);
         const pb = parseInt(document.getElementById(`pb-${jogo.id}`)?.value ?? 0);
+        // Nunca envia o campo pontos — só o admin pode definir pontuação
         const { error } = await sb.schema('app_bolao').from('palpites').upsert({
           usuario_id: currentUser.id,
           jogo_id: jogo.id,

@@ -406,14 +406,16 @@
         const pa = parseInt(document.getElementById(`pa-${jogo.id}`)?.value ?? 0);
         const pb = parseInt(document.getElementById(`pb-${jogo.id}`)?.value ?? 0);
         // Nunca envia o campo pontos — só o admin pode definir pontuação
+        const agora_iso = new Date().toISOString();
         const { error } = await sb.schema('app_bolao').from('palpites').upsert({
           usuario_id: currentUser.id,
           jogo_id: jogo.id,
           palpite_a: isNaN(pa) ? 0 : pa,
           palpite_b: isNaN(pb) ? 0 : pb,
-          atualizado_em: new Date().toISOString(),
+          criado_em: agora_iso,
+          atualizado_em: agora_iso,
           ativo: true
-        }, { onConflict: 'usuario_id,jogo_id' });
+        }, { onConflict: 'usuario_id,jogo_id', ignoreDuplicates: false });
         if (error) erros++; else salvos++;
       }
 

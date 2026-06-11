@@ -345,7 +345,7 @@
             <tbody>`;
         grupos[fase].forEach(j => {
           const temResult = j.gols_a !== null && j.gols_b !== null;
-          const dataFmt = new Date(j.data_hora).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+          const dataFmt = new Date(j.data_hora).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
           const resultHtml = temResult
             ? `<span class="result-display">${j.gols_a} × ${j.gols_b}</span>`
             : `<span class="result-empty">Não lançado</span>`;
@@ -355,7 +355,7 @@
 
           html += `<tr>
             <td style="color:#718096">${j.rodada}</td>
-            <td style="font-weight:600">${j.time_a} × ${j.time_b}</td>
+            <td style="font-weight:600">${traduzirNome(j.time_a)} × ${traduzirNome(j.time_b)}</td>
             <td class="col-hide" style="color:#718096;font-size:12px">${dataFmt}</td>
             <td>${resultHtml}</td>
             <td>${statusHtml}</td>
@@ -375,10 +375,39 @@
 
     function esc(str) { return String(str).replace(/'/g, "\\'"); }
 
+    // ── Tradução: espanhol → português brasileiro ────────────────────────────
+    const TRADUCOES = {
+      'Sudáfrica': 'África do Sul', 'Marruecos': 'Marrocos', 'Argelia': 'Argélia',
+      'Nigeria': 'Nigéria', 'Camerún': 'Camarões', 'Ghana': 'Gana', 'Túnez': 'Tunísia',
+      'Egipto': 'Egito', 'Costa de Marfil': 'Costa do Marfim', 'Congo RD': 'Congo RD',
+      'República Democrática del Congo': 'Congo RD', 'RD Congo': 'Congo RD',
+      'Kenia': 'Quênia', 'Tanzania': 'Tanzânia', 'Zimbabue': 'Zimbábue',
+      'Guinea': 'Guiné', 'Guinea Ecuatorial': 'Guiné Equatorial',
+      'Corea del Sur': 'Coreia do Sul', 'Arabia Saudita': 'Arábia Saudita',
+      'Irán': 'Irã', 'Japón': 'Japão', 'Australia': 'Austrália',
+      'Uzbekistán': 'Uzbequistão', 'Jordania': 'Jordânia', 'Irak': 'Iraque',
+      'Omán': 'Omã', 'Indonesia': 'Indonésia', 'Tailandia': 'Tailândia',
+      'Alemania': 'Alemanha', 'Francia': 'França', 'España': 'Espanha',
+      'Italia': 'Itália', 'Países Bajos': 'Holanda', 'Bélgica': 'Bélgica',
+      'Croacia': 'Croácia', 'Serbia': 'Sérvia', 'Suiza': 'Suíça',
+      'Austria': 'Áustria', 'Polonia': 'Polônia', 'Escocia': 'Escócia',
+      'Turquía': 'Turquia', 'Hungría': 'Hungria', 'Rumanía': 'Romênia',
+      'Rumania': 'Romênia', 'Eslovaquia': 'Eslováquia', 'Eslovenia': 'Eslovênia',
+      'Ucrania': 'Ucrânia', 'Albania': 'Albânia', 'Georgia': 'Geórgia',
+      'Grecia': 'Grécia', 'Suecia': 'Suécia', 'Finlandia': 'Finlândia',
+      'República Checa': 'República Tcheca', 'Bosnia y Herzegovina': 'Bósnia e Herzegovina',
+      'Macedonia del Norte': 'Macedônia do Norte',
+      'Colombia': 'Colômbia', 'Ecuador': 'Equador', 'Bolivia': 'Bolívia',
+      'Paraguay': 'Paraguai', 'Uruguay': 'Uruguai', 'Haití': 'Haiti', 'Perú': 'Peru',
+      'Nueva Zelanda': 'Nova Zelândia',
+      'Estados Unidos': 'EUA', 'United States': 'EUA', 'USA': 'EUA',
+    };
+    function traduzirNome(nome) { return TRADUCOES[nome] || nome; }
+
     // ── MODAL RESULTADO ───────────────────────────────────────────────────────
     function abrirModalResultado(jogoId, timeA, timeB, gA, gB) {
       jogoResultadoId = jogoId;
-      document.getElementById('modalTeams').textContent = `${timeA} × ${timeB}`;
+      document.getElementById('modalTeams').textContent = `${traduzirNome(timeA)} × ${traduzirNome(timeB)}`;
       document.getElementById('resA').value = gA;
       document.getElementById('resB').value = gB;
       document.getElementById('modalResultado').classList.add('open');

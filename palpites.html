@@ -352,7 +352,7 @@
             html += `<div class="${cardClass}" id="jogo-${jogo.id}">
               <div class="time-lado">
                 <div class="time-flag">${getFlagEmoji(jogo.time_a)}</div>
-                <div class="time-nome">${jogo.time_a}</div>
+                <div class="time-nome">${traduzirNome(jogo.time_a)}</div>
               </div>
               <div class="placar-centro">
                 <div class="placar-inputs">
@@ -368,7 +368,7 @@
               </div>
               <div class="time-lado direito">
                 <div class="time-flag">${getFlagEmoji(jogo.time_b)}</div>
-                <div class="time-nome">${jogo.time_b}</div>
+                <div class="time-nome">${traduzirNome(jogo.time_b)}</div>
               </div>
             </div>`;
           });
@@ -427,29 +427,88 @@
       }
     }
 
+    // ── Fuso horário: converte para horário de Brasília (UTC-3) ─────────────
     function formatarData(iso) {
       const d = new Date(iso);
-      return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
-        + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      return d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' })
+        + ' às ' + d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
     }
 
-    function getFlagEmoji(nome) {
+    // ── Tradução: espanhol → português brasileiro ────────────────────────────
+    const TRADUCOES = {
+      // África
+      'Sudáfrica': 'África do Sul', 'Marruecos': 'Marrocos', 'Argelia': 'Argélia',
+      'Nigeria': 'Nigéria', 'Camerún': 'Camarões', 'Ghana': 'Gana', 'Túnez': 'Tunísia',
+      'Egipto': 'Egito', 'Costa de Marfil': 'Costa do Marfim', 'Senegal': 'Senegal',
+      'Mali': 'Mali', 'Congo RD': 'Congo RD', 'República Democrática del Congo': 'Congo RD',
+      'RD Congo': 'Congo RD', 'Kenia': 'Quênia', 'Tanzania': 'Tanzânia',
+      'Zimbabue': 'Zimbábue', 'Guinea': 'Guiné', 'Guinea Ecuatorial': 'Guiné Equatorial',
+      // Ásia
+      'Corea del Sur': 'Coreia do Sul', 'Arabia Saudita': 'Arábia Saudita',
+      'Irán': 'Irã', 'Japón': 'Japão', 'Australia': 'Austrália',
+      'Uzbekistán': 'Uzbequistão', 'Jordania': 'Jordânia', 'Irak': 'Iraque',
+      'Omán': 'Omã', 'Siria': 'Síria', 'Tailandia': 'Tailândia',
+      'Indonesia': 'Indonésia', 'Filipinas': 'Filipinas',
+      // Europa
+      'Alemania': 'Alemanha', 'Francia': 'França', 'España': 'Espanha',
+      'Italia': 'Itália', 'Países Bajos': 'Holanda', 'Bélgica': 'Bélgica',
+      'Croacia': 'Croácia', 'Serbia': 'Sérvia', 'Suiza': 'Suíça',
+      'Austria': 'Áustria', 'Polonia': 'Polônia', 'Escocia': 'Escócia',
+      'Turquía': 'Turquia', 'Hungría': 'Hungria', 'Rumanía': 'Romênia',
+      'Rumania': 'Romênia', 'Eslovaquia': 'Eslováquia', 'Eslovenia': 'Eslovênia',
+      'Ucrania': 'Ucrânia', 'Albania': 'Albânia', 'Georgia': 'Geórgia',
+      'Grecia': 'Grécia', 'Suecia': 'Suécia', 'Noruega': 'Noruega',
+      'Finlandia': 'Finlândia', 'República Checa': 'República Tcheca',
+      'Bosnia y Herzegovina': 'Bósnia e Herzegovina', 'Kosovo': 'Kosovo',
+      'Montenegro': 'Montenegro', 'Macedonia del Norte': 'Macedônia do Norte',
+      // Américas
+      'Colombia': 'Colômbia', 'Ecuador': 'Equador', 'Bolivia': 'Bolívia',
+      'Paraguay': 'Paraguai', 'Uruguay': 'Uruguai', 'Haití': 'Haiti',
+      'Venezuela': 'Venezuela', 'Perú': 'Peru',
+      'Nueva Zelanda': 'Nova Zelândia',
+      // Já corretos em ambos os idiomas (mapeamentos de segurança)
+      'Estados Unidos': 'EUA', 'United States': 'EUA', 'USA': 'EUA',
+    };
+
+    function traduzirNome(nome) {
+      return TRADUCOES[nome] || nome;
+    }
+
+    // ── Bandeiras por país (nome em português) ───────────────────────────────
+    function getFlagEmoji(nomeOriginal) {
+      const nome = traduzirNome(nomeOriginal);
       const flags = {
-        'Brasil': '🇧🇷', 'Argentina': '🇦🇷', 'França': '🇫🇷', 'Alemanha': '🇩🇪',
-        'Espanha': '🇪🇸', 'Portugal': '🇵🇹', 'Holanda': '🇳🇱', 'Inglaterra': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-        'Itália': '🇮🇹', 'Uruguai': '🇺🇾', 'Colombia': '🇨🇴', 'México': '🇲🇽',
-        'EUA': '🇺🇸', 'Canadá': '🇨🇦', 'Japão': '🇯🇵', 'Coreia do Sul': '🇰🇷',
-        'Marrocos': '🇲🇦', 'Senegal': '🇸🇳', 'Nigéria': '🇳🇬', 'Camarões': '🇨🇲',
-        'Egito': '🇪🇬', 'Gana': '🇬🇭', 'Mali': '🇲🇱', 'Tunísia': '🇹🇳',
-        'Arábia Saudita': '🇸🇦', 'Irã': '🇮🇷', 'Japão': '🇯🇵', 'Austrália': '🇦🇺',
-        'Bélgica': '🇧🇪', 'Croácia': '🇭🇷', 'Sérvia': '🇷🇸', 'Suíça': '🇨🇭',
-        'Dinamarca': '🇩🇰', 'Polônia': '🇵🇱', 'Escócia': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Turquia': '🇹🇷',
-        'Romênia': '🇷🇴', 'Áustria': '🇦🇹', 'Eslováquia': '🇸🇰', 'Ucrânia': '🇺🇦',
-        'Hungria': '🇭🇺', 'Albânia': '🇦🇱', 'Geórgia': '🇬🇪', 'Eslovênia': '🇸🇮',
-        'Chile': '🇨🇱', 'Peru': '🇵🇪', 'Venezuela': '🇻🇪', 'Equador': '🇪🇨',
-        'Bolívia': '🇧🇴', 'Paraguai': '🇵🇾', 'Jamaica': '🇯🇲', 'Haiti': '🇭🇹',
-        'Honduras': '🇭🇳', 'El Salvador': '🇸🇻', 'Costa Rica': '🇨🇷', 'Panamá': '🇵🇦',
-        'Guatemala': '🇬🇹', 'Nova Zelândia': '🇳🇿', 'Qatar': '🇶🇦',
+        // América do Sul
+        'Brasil': '🇧🇷', 'Argentina': '🇦🇷', 'Uruguai': '🇺🇾', 'Colômbia': '🇨🇴',
+        'Equador': '🇪🇨', 'Venezuela': '🇻🇪', 'Chile': '🇨🇱', 'Peru': '🇵🇪',
+        'Bolívia': '🇧🇴', 'Paraguai': '🇵🇾',
+        // América do Norte e Central
+        'EUA': '🇺🇸', 'México': '🇲🇽', 'Canadá': '🇨🇦', 'Honduras': '🇭🇳',
+        'Costa Rica': '🇨🇷', 'Panamá': '🇵🇦', 'El Salvador': '🇸🇻',
+        'Jamaica': '🇯🇲', 'Guatemala': '🇬🇹', 'Haiti': '🇭🇹',
+        // Europa
+        'Espanha': '🇪🇸', 'França': '🇫🇷', 'Inglaterra': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Alemanha': '🇩🇪',
+        'Portugal': '🇵🇹', 'Holanda': '🇳🇱', 'Bélgica': '🇧🇪', 'Croácia': '🇭🇷',
+        'Itália': '🇮🇹', 'Suíça': '🇨🇭', 'Áustria': '🇦🇹', 'Dinamarca': '🇩🇰',
+        'Escócia': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Turquia': '🇹🇷', 'Hungria': '🇭🇺', 'Sérvia': '🇷🇸',
+        'Ucrânia': '🇺🇦', 'República Tcheca': '🇨🇿', 'Eslováquia': '🇸🇰',
+        'Eslovênia': '🇸🇮', 'Albânia': '🇦🇱', 'Geórgia': '🇬🇪', 'Romênia': '🇷🇴',
+        'Polônia': '🇵🇱', 'Suécia': '🇸🇪', 'Noruega': '🇳🇴', 'Finlândia': '🇫🇮',
+        'Grécia': '🇬🇷', 'Bósnia e Herzegovina': '🇧🇦', 'Montenegro': '🇲🇪',
+        'Macedônia do Norte': '🇲🇰', 'Kosovo': '🇽🇰', 'País de Gales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
+        // África
+        'Marrocos': '🇲🇦', 'Senegal': '🇸🇳', 'Egito': '🇪🇬', 'Nigéria': '🇳🇬',
+        'Camarões': '🇨🇲', 'Gana': '🇬🇭', 'África do Sul': '🇿🇦', 'Argélia': '🇩🇿',
+        'Mali': '🇲🇱', 'Tunísia': '🇹🇳', 'Costa do Marfim': '🇨🇮', 'Congo RD': '🇨🇩',
+        'Guiné': '🇬🇳', 'Guiné Equatorial': '🇬🇶', 'Quênia': '🇰🇪', 'Tanzânia': '🇹🇿',
+        'Zimbábue': '🇿🇼', 'Cabo Verde': '🇨🇻', 'Burkina Faso': '🇧🇫',
+        // Ásia / Oceania
+        'Japão': '🇯🇵', 'Coreia do Sul': '🇰🇷', 'Arábia Saudita': '🇸🇦',
+        'Irã': '🇮🇷', 'Austrália': '🇦🇺', 'Qatar': '🇶🇦', 'Uzbequistão': '🇺🇿',
+        'Jordânia': '🇯🇴', 'Iraque': '🇮🇶', 'Omã': '🇴🇲', 'Nova Zelândia': '🇳🇿',
+        'Indonésia': '🇮🇩', 'Tailândia': '🇹🇭', 'Filipinas': '🇵🇭',
+        // Genéricos (fases eliminatórias)
+        'Classificado': '🏳️',
       };
       return flags[nome] || '🏳️';
     }

@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meus Palpites — Bolão Copa 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Outfit', sans-serif; background: #f0f4f8; color: #1a202c; }
+
+    /* TOPBAR */
+    .topbar {
+      background: linear-gradient(135deg, #1d327b, #162666);
+      border-bottom: 3px solid #25bbee;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar-brand { font-size: 18px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+    .topbar-brand span { color: #25bbee; }
+    .topbar-nav { display: flex; gap: 6px; }
+    .nav-link {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.75);
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .nav-link:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .nav-link.active { background: rgba(37,187,238,0.2); color: #25bbee; }
+    .topbar-user { display: flex; align-items: center; gap: 12px; }
+    .user-name { font-size: 13px; color: rgba(255,255,255,0.8); }
+    .btn-logout {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.3);
+      color: rgba(255,255,255,0.7);
+      border-radius: 6px;
+      padding: 4px 12px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-logout:hover { border-color: #fff; color: #fff; }
+
+    /* PONTUAÇÃO */
+    .pontos-banner {
+      background: linear-gradient(135deg, #1d327b, #162666);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .pontos-valor { font-size: 36px; font-weight: 700; color: #25bbee; }
+    .pontos-label { font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+    .pontos-info { color: #fff; }
+    .pontos-title { font-size: 16px; font-weight: 600; }
+
+    /* MAIN */
+    .main { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+
+    /* FASE HEADER */
+    .fase-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 28px 0 16px;
+    }
+    .fase-header:first-child { margin-top: 0; }
+    .fase-badge {
+      background: #1d327b;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+    .fase-line { flex: 1; height: 1px; background: #d0d8e8; }
+
+    /* RODADA */
+    .rodada-wrap { margin-bottom: 8px; }
+    .rodada-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #718096;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      padding-left: 4px;
+    }
+
+    /* JOGO CARD */
+    .jogo-card {
+      background: #fff;
+      border: 1px solid #d0d8e8;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 12px;
+      transition: box-shadow 0.2s;
+    }
+    .jogo-card:hover { box-shadow: 0 2px 8px rgba(29,50,123,0.08); }
+    .jogo-card.encerrado { opacity: 0.75; background: #f8f9fb; }
+    .jogo-card.salvo { border-left: 3px solid #25bbee; }
+
+    .time-lado { display: flex; align-items: center; gap: 10px; }
+    .time-lado.direito { flex-direction: row-reverse; text-align: right; }
+    .time-nome { font-size: 14px; font-weight: 600; color: #1a202c; }
+    .time-flag { font-size: 22px; }
+
+    .placar-centro { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .placar-inputs { display: flex; align-items: center; gap: 8px; }
+    .placar-input {
+      width: 48px;
+      height: 48px;
+      border: 2px solid #c3cfe2;
+      border-radius: 8px;
+      text-align: center;
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #1d327b;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .placar-input:focus { border-color: #25bbee; }
+    .placar-input:disabled { background: #f0f4f8; color: #a0aec0; border-color: #e2e8f0; cursor: not-allowed; }
+    .placar-sep { font-size: 20px; font-weight: 700; color: #a0aec0; }
+
+    .jogo-meta { font-size: 11px; color: #a0aec0; text-align: center; }
+    .jogo-encerrado-label {
+      font-size: 11px;
+      color: #e30613;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .pts-badge {
+      font-size: 11px;
+      font-weight: 600;
+      color: #276749;
+      background: #f0fff4;
+      border: 1px solid #c6f6d5;
+      border-radius: 10px;
+      padding: 2px 8px;
+    }
+
+    /* BOTÃO SALVAR */
+    .rodada-footer {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 20px;
+      margin-top: 6px;
+    }
+    .btn-salvar {
+      background: #1d327b;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 24px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-salvar:hover { background: #162666; }
+    .btn-salvar:disabled { background: #a0aec0; cursor: not-allowed; }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1d327b;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 9999;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.error { background: #e30613; }
+
+    /* LOADING */
+    .loading { text-align: center; padding: 60px; color: #718096; font-size: 15px; }
+    .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid #d0d8e8; border-top-color: #1d327b; border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 12px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 600px) {
+      .topbar-nav { display: none; }
+      .time-nome { font-size: 12px; }
+      .placar-input { width: 40px; height: 40px; font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-brand">⚽ Bolão Copa <span>2026</span></div>
+    <nav class="topbar-nav">
+      <a href="palpites.html" class="nav-link active">Meus Palpites</a>
+      <a href="classificacao.html" class="nav-link">Classificação</a>
+    </nav>
+    <div class="topbar-user">
+      <span class="user-name" id="userName">...</span>
+      <button class="btn-logout" onclick="logout()">Sair</button>
+    </div>
+  </div>
+
+  <div id="pontosWrap" style="display:none">
+    <div class="pontos-banner">
+      <div>
+        <div class="pontos-valor" id="pontosValor">0</div>
+      </div>
+      <div class="pontos-info">
+        <div class="pontos-title" id="pontosNome">Carregando...</div>
+        <div class="pontos-label">pontos acumulados no bolão</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main" id="mainContent">
+    <div class="loading">
+      <div class="spinner"></div><br>Carregando jogos...
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ── Configuração Supabase ─────────────────────────────────────────────────
+    const SUPABASE_URL = 'https://bmepxcnrsofofoswubuu.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_sbF1a0yc7knI0j990Dwi7Q_PfW5hJg2';
+    const { createClient } = supabase;
+    const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const FASES_LABEL = {
+      grupos: 'Fase de Grupos',
+      oitavas: 'Oitavas de Final',
+      quartas: 'Quartas de Final',
+      semi: 'Semifinais',
+      terceiro_lugar: 'Disputa de 3º Lugar',
+      final: 'Final'
+    };
+
+    let currentUser = null;
+    let currentPerfil = null;
+
+    async function init() {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) { window.location.href = 'index.html'; return; }
+      currentUser = session.user;
+
+      const { data: perfil } = await sb.schema('app_bolao').from('perfis')
+        .select('*').eq('id', currentUser.id).single();
+      currentPerfil = perfil;
+
+      if (perfil) {
+        document.getElementById('userName').textContent = perfil.nome || perfil.email;
+        document.getElementById('pontosNome').textContent = perfil.nome || perfil.email;
+        document.getElementById('pontosValor').textContent = perfil.pontos_total ?? 0;
+        document.getElementById('pontosWrap').style.display = 'block';
+      }
+
+      await renderJogos();
+    }
+
+    async function renderJogos() {
+      const { data: jogos, error } = await sb.schema('app_bolao').from('jogos')
+        .select('*').eq('ativo', true).order('fase').order('rodada').order('data_hora');
+      if (error || !jogos) {
+        document.getElementById('mainContent').innerHTML = '<div class="loading">Erro ao carregar jogos.</div>';
+        return;
+      }
+
+      const { data: palpites } = await sb.schema('app_bolao').from('palpites')
+        .select('*').eq('usuario_id', currentUser.id);
+      const palpiteMap = {};
+      (palpites || []).forEach(p => palpiteMap[p.jogo_id] = p);
+
+      const agora = new Date();
+
+      // Agrupar por fase → rodada
+      const grupos = {};
+      jogos.forEach(j => {
+        if (!grupos[j.fase]) grupos[j.fase] = {};
+        if (!grupos[j.fase][j.rodada]) grupos[j.fase][j.rodada] = [];
+        grupos[j.fase][j.rodada].push(j);
+      });
+
+      const fasesOrdem = ['grupos', 'oitavas', 'quartas', 'semi', 'terceiro_lugar', 'final'];
+      let html = '';
+
+      fasesOrdem.forEach(fase => {
+        if (!grupos[fase]) return;
+        html += `<div class="fase-header">
+          <div class="fase-badge">${FASES_LABEL[fase] || fase}</div>
+          <div class="fase-line"></div>
+        </div>`;
+
+        Object.keys(grupos[fase]).sort((a, b) => a - b).forEach(rodada => {
+          const jogosDaRodada = grupos[fase][rodada];
+          const rodadaId = `rodada-${fase}-${rodada}`;
+          const rodadaLabel = fase === 'grupos' ? `Rodada ${rodada}` : `Jogo ${rodada}`;
+
+          html += `<div class="rodada-wrap">
+            <div class="rodada-title">${rodadaLabel}</div>`;
+
+          jogosDaRodada.forEach(jogo => {
+            const encerrado = agora >= new Date(jogo.data_hora);
+            const p = palpiteMap[jogo.id];
+            const pA = p ? p.palpite_a : 0;
+            const pB = p ? p.palpite_b : 0;
+            const pontos = p?.pontos;
+            const dataFmt = formatarData(jogo.data_hora);
+            const disabledAttr = encerrado ? 'disabled' : '';
+            const cardClass = encerrado ? 'jogo-card encerrado' : (p ? 'jogo-card salvo' : 'jogo-card');
+
+            let metaHtml = '';
+            if (encerrado) {
+              metaHtml = `<div class="jogo-encerrado-label">🔒 Palpites encerrados</div>`;
+              if (pontos !== null && pontos !== undefined) {
+                metaHtml += `<div class="pts-badge">+${pontos} pts</div>`;
+              }
+            } else {
+              metaHtml = `<div class="jogo-meta">${dataFmt}</div>`;
+            }
+
+            html += `<div class="${cardClass}" id="jogo-${jogo.id}">
+              <div class="time-lado">
+                <div class="time-flag">${getFlagEmoji(jogo.time_a)}</div>
+                <div class="time-nome">${jogo.time_a}</div>
+              </div>
+              <div class="placar-centro">
+                <div class="placar-inputs">
+                  <input type="number" min="0" max="99" class="placar-input"
+                    id="pa-${jogo.id}" value="${pA}" ${disabledAttr}
+                    oninput="this.value=this.value.replace(/[^0-9]/,'')" />
+                  <span class="placar-sep">×</span>
+                  <input type="number" min="0" max="99" class="placar-input"
+                    id="pb-${jogo.id}" value="${pB}" ${disabledAttr}
+                    oninput="this.value=this.value.replace(/[^0-9]/,'')" />
+                </div>
+                ${metaHtml}
+              </div>
+              <div class="time-lado direito">
+                <div class="time-flag">${getFlagEmoji(jogo.time_b)}</div>
+                <div class="time-nome">${jogo.time_b}</div>
+              </div>
+            </div>`;
+          });
+
+          const temAbertos = jogosDaRodada.some(j => agora < new Date(j.data_hora));
+          if (temAbertos) {
+            const jogoIds = jogosDaRodada.map(j => j.id).join(',');
+            html += `<div class="rodada-footer">
+              <button class="btn-salvar" onclick="salvarRodada('${jogoIds}')">
+                💾 Salvar palpites desta rodada
+              </button>
+            </div>`;
+          }
+
+          html += `</div>`;
+        });
+      });
+
+      document.getElementById('mainContent').innerHTML = html || '<div class="loading">Nenhum jogo cadastrado.</div>';
+    }
+
+    async function salvarRodada(jogoIdsStr) {
+      const jogoIds = jogoIdsStr.split(',').map(Number);
+      const agora = new Date();
+
+      const { data: jogos } = await sb.schema('app_bolao').from('jogos')
+        .select('id, data_hora').in('id', jogoIds);
+
+      let salvos = 0;
+      let erros = 0;
+
+      for (const jogo of jogos) {
+        if (agora >= new Date(jogo.data_hora)) continue;
+        const pa = parseInt(document.getElementById(`pa-${jogo.id}`)?.value ?? 0);
+        const pb = parseInt(document.getElementById(`pb-${jogo.id}`)?.value ?? 0);
+        const { error } = await sb.schema('app_bolao').from('palpites').upsert({
+          usuario_id: currentUser.id,
+          jogo_id: jogo.id,
+          palpite_a: isNaN(pa) ? 0 : pa,
+          palpite_b: isNaN(pb) ? 0 : pb,
+          atualizado_em: new Date().toISOString(),
+          ativo: true
+        }, { onConflict: 'usuario_id,jogo_id' });
+        if (error) erros++; else salvos++;
+      }
+
+      if (erros === 0) {
+        showToast(`✅ ${salvos} palpite(s) salvo(s) com sucesso!`);
+        // Marca visualmente os jogos salvos
+        jogoIds.forEach(id => {
+          const card = document.getElementById(`jogo-${id}`);
+          if (card && !card.classList.contains('encerrado')) card.classList.add('salvo');
+        });
+      } else {
+        showToast(`⚠️ ${erros} palpite(s) não foram salvos.`, true);
+      }
+    }
+
+    function formatarData(iso) {
+      const d = new Date(iso);
+      return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+        + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function getFlagEmoji(nome) {
+      const flags = {
+        'Brasil': '🇧🇷', 'Argentina': '🇦🇷', 'França': '🇫🇷', 'Alemanha': '🇩🇪',
+        'Espanha': '🇪🇸', 'Portugal': '🇵🇹', 'Holanda': '🇳🇱', 'Inglaterra': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+        'Itália': '🇮🇹', 'Uruguai': '🇺🇾', 'Colombia': '🇨🇴', 'México': '🇲🇽',
+        'EUA': '🇺🇸', 'Canadá': '🇨🇦', 'Japão': '🇯🇵', 'Coreia do Sul': '🇰🇷',
+        'Marrocos': '🇲🇦', 'Senegal': '🇸🇳', 'Nigéria': '🇳🇬', 'Camarões': '🇨🇲',
+        'Egito': '🇪🇬', 'Gana': '🇬🇭', 'Mali': '🇲🇱', 'Tunísia': '🇹🇳',
+        'Arábia Saudita': '🇸🇦', 'Irã': '🇮🇷', 'Japão': '🇯🇵', 'Austrália': '🇦🇺',
+        'Bélgica': '🇧🇪', 'Croácia': '🇭🇷', 'Sérvia': '🇷🇸', 'Suíça': '🇨🇭',
+        'Dinamarca': '🇩🇰', 'Polônia': '🇵🇱', 'Escócia': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Turquia': '🇹🇷',
+        'Romênia': '🇷🇴', 'Áustria': '🇦🇹', 'Eslováquia': '🇸🇰', 'Ucrânia': '🇺🇦',
+        'Hungria': '🇭🇺', 'Albânia': '🇦🇱', 'Geórgia': '🇬🇪', 'Eslovênia': '🇸🇮',
+        'Chile': '🇨🇱', 'Peru': '🇵🇪', 'Venezuela': '🇻🇪', 'Equador': '🇪🇨',
+        'Bolívia': '🇧🇴', 'Paraguai': '🇵🇾', 'Jamaica': '🇯🇲', 'Haiti': '🇭🇹',
+        'Honduras': '🇭🇳', 'El Salvador': '🇸🇻', 'Costa Rica': '🇨🇷', 'Panamá': '🇵🇦',
+        'Guatemala': '🇬🇹', 'Nova Zelândia': '🇳🇿', 'Qatar': '🇶🇦',
+      };
+      return flags[nome] || '🏳️';
+    }
+
+    function showToast(msg, isError = false) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast' + (isError ? ' error' : '') + ' show';
+      setTimeout(() => t.className = 'toast' + (isError ? ' error' : ''), 3000);
+    }
+
+    async function logout() {
+      await sb.auth.signOut();
+      window.location.href = 'index.html';
+    }
+
+    init();
+  </script>
+</body>
+</html>

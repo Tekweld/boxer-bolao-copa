@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bolão Copa 2026 — Boxer Soldas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: linear-gradient(135deg, #1d327b 0%, #162666 50%, #0f1a4a 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .login-wrapper {
+      width: 100%;
+      max-width: 420px;
+    }
+    .brand {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .brand-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+    }
+    .brand-title span { color: #25bbee; }
+    .brand-sub {
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+      margin-top: 6px;
+    }
+    .trophy { font-size: 48px; margin-bottom: 12px; display: block; }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 32px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 28px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      background: none;
+      border: none;
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: #718096;
+      cursor: pointer;
+      padding-bottom: 12px;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      color: #1d327b;
+      border-bottom-color: #1d327b;
+      font-weight: 600;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #718096;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      margin-top: 16px;
+    }
+    label:first-of-type { margin-top: 0; }
+    input[type="email"], input[type="password"], input[type="text"] {
+      width: 100%;
+      border: 1px solid #c3cfe2;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      color: #1a202c;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: #25bbee; }
+    .btn-primary {
+      width: 100%;
+      background: #1d327b;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 24px;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover { background: #162666; }
+    .btn-primary:disabled { background: #a0aec0; cursor: not-allowed; }
+    .msg {
+      margin-top: 16px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      display: none;
+    }
+    .msg.error { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; display: block; }
+    .msg.success { background: #f0fff4; color: #276749; border: 1px solid #c6f6d5; display: block; }
+    .footer-links {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .footer-links a {
+      font-size: 12px;
+      color: rgba(255,255,255,0.6);
+      text-decoration: none;
+    }
+    .footer-links a:hover { color: #25bbee; }
+  </style>
+</head>
+<body>
+  <div class="login-wrapper">
+    <div class="brand">
+      <span class="trophy">⚽</span>
+      <div class="brand-title">Bolão Copa <span>2026</span></div>
+      <div class="brand-sub">Boxer Soldas — Participe e torça pelo seu time!</div>
+    </div>
+
+    <div class="card">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('login')">Entrar</button>
+        <button class="tab-btn" onclick="switchTab('cadastro')">Criar Conta</button>
+      </div>
+
+      <!-- LOGIN -->
+      <div class="tab-panel active" id="tab-login">
+        <label>E-mail</label>
+        <input type="email" id="loginEmail" placeholder="seu@email.com" />
+        <label>Senha</label>
+        <input type="password" id="loginSenha" placeholder="••••••••" />
+        <button class="btn-primary" id="btnLogin" onclick="fazerLogin()">Entrar</button>
+        <div class="msg" id="loginMsg"></div>
+      </div>
+
+      <!-- CADASTRO -->
+      <div class="tab-panel" id="tab-cadastro">
+        <label>Nome completo</label>
+        <input type="text" id="cadNome" placeholder="Seu nome" />
+        <label>E-mail</label>
+        <input type="email" id="cadEmail" placeholder="seu@email.com" />
+        <label>Senha</label>
+        <input type="password" id="cadSenha" placeholder="Mínimo 6 caracteres" />
+        <button class="btn-primary" id="btnCadastro" onclick="fazerCadastro()">Criar Conta</button>
+        <div class="msg" id="cadMsg"></div>
+      </div>
+    </div>
+
+    <div class="footer-links">
+      <a href="classificacao.html">Ver ranking público</a>
+    </div>
+  </div>
+
+  <script>
+    // ── Configuração Supabase ──────────────────────────────────────────────────
+    const SUPABASE_URL = 'https://bmepxcnrsofofoswubuu.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_sbF1a0yc7knI0j990Dwi7Q_PfW5hJg2';
+    const { createClient } = supabase;
+    const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Redireciona se já logado
+    (async () => {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) window.location.href = 'palpites.html';
+    })();
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach((b, i) => {
+        b.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'cadastro'));
+      });
+      document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+      document.getElementById('tab-cadastro').classList.toggle('active', tab === 'cadastro');
+    }
+
+    function showMsg(id, text, type) {
+      const el = document.getElementById(id);
+      el.textContent = text;
+      el.className = 'msg ' + type;
+    }
+
+    async function fazerLogin() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const senha = document.getElementById('loginSenha').value;
+      const btn = document.getElementById('btnLogin');
+      if (!email || !senha) return showMsg('loginMsg', 'Preencha e-mail e senha.', 'error');
+      btn.disabled = true;
+      btn.textContent = 'Entrando...';
+      const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+      if (error) {
+        showMsg('loginMsg', 'E-mail ou senha incorretos.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Entrar';
+      } else {
+        window.location.href = 'palpites.html';
+      }
+    }
+
+    async function fazerCadastro() {
+      const nome = document.getElementById('cadNome').value.trim();
+      const email = document.getElementById('cadEmail').value.trim();
+      const senha = document.getElementById('cadSenha').value;
+      const btn = document.getElementById('btnCadastro');
+      if (!nome || !email || !senha) return showMsg('cadMsg', 'Preencha todos os campos.', 'error');
+      if (senha.length < 6) return showMsg('cadMsg', 'Senha deve ter ao menos 6 caracteres.', 'error');
+      btn.disabled = true;
+      btn.textContent = 'Criando conta...';
+      const { data, error } = await sb.auth.signUp({ email, password: senha });
+      if (error) {
+        showMsg('cadMsg', error.message, 'error');
+        btn.disabled = false;
+        btn.textContent = 'Criar Conta';
+        return;
+      }
+      if (data.user) {
+        // Criar perfil na tabela perfis
+        await sb.schema('app_bolao').from('perfis').insert({
+          id: data.user.id,
+          email: email,
+          nome: nome,
+          perfil: 'jogador',
+          pontos_total: 0,
+          ativo: true
+        });
+        showMsg('cadMsg', 'Conta criada! Redirecionando...', 'success');
+        setTimeout(() => window.location.href = 'palpites.html', 1500);
+      }
+    }
+
+    // Enter para submeter
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        const loginActive = document.getElementById('tab-login').classList.contains('active');
+        if (loginActive) fazerLogin(); else fazerCadastro();
+      }
+    });
+  </script>
+</body>
+</html>

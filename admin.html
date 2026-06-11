@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Bolão Copa 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Outfit', sans-serif; background: #f0f4f8; color: #1a202c; }
+
+    .topbar {
+      background: linear-gradient(135deg, #1d327b, #162666);
+      border-bottom: 3px solid #25bbee;
+      padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 60px; position: sticky; top: 0; z-index: 100;
+    }
+    .topbar-brand { font-size: 18px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+    .topbar-brand span { color: #25bbee; }
+    .admin-badge {
+      background: #e30613; color: #fff; font-size: 10px; font-weight: 700;
+      padding: 2px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .user-name { font-size: 13px; color: rgba(255,255,255,0.8); }
+    .btn-logout {
+      background: none; border: 1px solid rgba(255,255,255,0.3); color: rgba(255,255,255,0.7);
+      border-radius: 6px; padding: 4px 12px; font-family: 'Outfit', sans-serif;
+      font-size: 12px; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-logout:hover { border-color: #fff; color: #fff; }
+
+    .main { max-width: 1100px; margin: 0 auto; padding: 28px 16px; }
+
+    /* TABS */
+    .section-tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 2px solid #e2e8f0; }
+    .stab {
+      padding: 8px 20px; background: none; border: none;
+      font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 500;
+      color: #718096; cursor: pointer; border-bottom: 2px solid transparent;
+      margin-bottom: -2px; transition: all 0.2s;
+    }
+    .stab.active { color: #1d327b; border-bottom-color: #1d327b; font-weight: 600; }
+    .stab-panel { display: none; }
+    .stab-panel.active { display: block; }
+
+    /* CARDS */
+    .card { background: #fff; border: 1px solid #d0d8e8; border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
+    .card-header {
+      padding: 14px 20px; border-bottom: 1px solid #e2e8f0;
+      display: flex; align-items: center; justify-content: space-between;
+      background: #f7fafc;
+    }
+    .card-title { font-size: 14px; font-weight: 600; color: #1a202c; }
+
+    /* TABELAS ADMIN */
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      background: #f7fafc; color: #718096; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 16px;
+      text-align: left; border-bottom: 1px solid #e2e8f0;
+    }
+    tbody tr { border-bottom: 1px solid #e2e8f0; transition: background 0.15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f0f7ff; }
+    td { padding: 10px 16px; font-size: 13px; vertical-align: middle; }
+
+    .fase-tag {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .fase-grupos { background: #ebf8ff; color: #2b6cb0; }
+    .fase-oitavas { background: #fef3c7; color: #b45309; }
+    .fase-quartas { background: #fce7f3; color: #9d174d; }
+    .fase-semi { background: #ede9fe; color: #6d28d9; }
+    .fase-terceiro_lugar { background: #fff7ed; color: #c2410c; }
+    .fase-final { background: #fef2f2; color: #b91c1c; }
+
+    .result-display {
+      font-size: 15px; font-weight: 700; color: #1d327b;
+      background: #eff6ff; padding: 3px 10px; border-radius: 6px;
+    }
+    .result-empty { color: #a0aec0; font-size: 12px; font-style: italic; }
+
+    /* BOTÕES */
+    .btn {
+      padding: 6px 14px; border-radius: 6px; font-family: 'Outfit', sans-serif;
+      font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s;
+    }
+    .btn-primary { background: #1d327b; color: #fff; }
+    .btn-primary:hover { background: #162666; }
+    .btn-primary:disabled { background: #a0aec0; cursor: not-allowed; }
+    .btn-success { background: #276749; color: #fff; }
+    .btn-success:hover { background: #1e4e37; }
+    .btn-outline { background: #fff; color: #1d327b; border: 1px solid #c3cfe2; }
+    .btn-outline:hover { border-color: #1d327b; }
+    .btn-danger { background: #fff; color: #e30613; border: 1px solid #fecaca; }
+    .btn-danger:hover { background: #fff5f5; }
+
+    /* MODAL */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 200;
+      align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff; border-radius: 12px; padding: 28px;
+      width: 100%; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .modal-title { font-size: 17px; font-weight: 700; color: #1a202c; margin-bottom: 20px; }
+    .modal-teams {
+      display: flex; align-items: center; justify-content: center;
+      gap: 12px; font-size: 16px; font-weight: 600; color: #1d327b;
+      background: #f0f4f8; border-radius: 8px; padding: 12px; margin-bottom: 20px;
+    }
+    .modal-vs { color: #a0aec0; font-weight: 400; font-size: 13px; }
+    label.field-label {
+      display: block; font-size: 12px; font-weight: 500; color: #718096;
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; margin-top: 16px;
+    }
+    label.field-label:first-of-type { margin-top: 0; }
+    input[type="number"], input[type="datetime-local"], input[type="text"] {
+      width: 100%; border: 1px solid #c3cfe2; border-radius: 6px;
+      padding: 9px 12px; font-family: 'Outfit', sans-serif; font-size: 14px;
+      color: #1a202c; outline: none; transition: border-color 0.2s;
+    }
+    input:focus { border-color: #25bbee; }
+    .score-inputs { display: flex; gap: 12px; align-items: center; }
+    .score-inputs input { text-align: center; font-size: 22px; font-weight: 700; color: #1d327b; padding: 10px; }
+    .score-sep { font-size: 22px; color: #a0aec0; font-weight: 700; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 24px; justify-content: flex-end; }
+
+    /* PONTUAÇÃO INFO */
+    .pts-legend {
+      background: #f0f4f8; border: 1px solid #d0d8e8; border-radius: 8px;
+      padding: 14px 18px; margin-bottom: 20px; font-size: 13px;
+    }
+    .pts-legend-title { font-weight: 600; color: #1d327b; margin-bottom: 10px; font-size: 13px; }
+    .pts-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; color: #4a5568; }
+    .pts-badge-lg {
+      min-width: 48px; text-align: center; font-weight: 700; padding: 2px 8px;
+      border-radius: 6px; font-size: 13px;
+    }
+    .pts-12 { background: #fef3c7; color: #b45309; }
+    .pts-9  { background: #dcfce7; color: #166534; }
+    .pts-6  { background: #dbeafe; color: #1e40af; }
+    .pts-3  { background: #f3e8ff; color: #7e22ce; }
+    .pts-0  { background: #f1f5f9; color: #64748b; }
+
+    /* LOADING / TOAST */
+    .loading { text-align: center; padding: 40px; color: #718096; font-size: 14px; }
+    .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid #d0d8e8; border-top-color: #1d327b; border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; padding: 12px 20px;
+      border-radius: 8px; font-size: 14px; font-weight: 500;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2); transform: translateY(80px); opacity: 0;
+      transition: all 0.3s; z-index: 9999; color: #fff;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.ok { background: #276749; }
+    .toast.err { background: #e30613; }
+    .toast.info { background: #1d327b; }
+
+    .status-tag {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 11px; font-weight: 600;
+    }
+    .status-ok { background: #dcfce7; color: #166534; }
+    .status-pen { background: #fef3c7; color: #b45309; }
+
+    @media (max-width: 700px) {
+      .col-hide { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-brand">
+      ⚽ Bolão Copa <span>2026</span>
+      <span class="admin-badge">Admin</span>
+    </div>
+    <div class="topbar-right">
+      <span class="user-name" id="userName"></span>
+      <button class="btn-logout" onclick="logout()">Sair</button>
+    </div>
+  </div>
+
+  <div class="main" id="mainContent">
+    <div class="loading"><div class="spinner"></div><br>Verificando permissão...</div>
+  </div>
+
+  <!-- MODAL RESULTADO -->
+  <div class="modal-overlay" id="modalResultado">
+    <div class="modal">
+      <div class="modal-title">🏁 Lançar Resultado</div>
+      <div class="modal-teams" id="modalTeams">— × —</div>
+      <label class="field-label">Placar final</label>
+      <div class="score-inputs">
+        <input type="number" id="resA" min="0" max="99" value="0" />
+        <span class="score-sep">×</span>
+        <input type="number" id="resB" min="0" max="99" value="0" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-success" id="btnSalvarRes" onclick="salvarResultado()">Confirmar e calcular pontos</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL EDITAR JOGO -->
+  <div class="modal-overlay" id="modalEditarJogo">
+    <div class="modal">
+      <div class="modal-title">✏️ Editar Jogo</div>
+      <label class="field-label">Time A</label>
+      <input type="text" id="editTimeA" />
+      <label class="field-label">Time B</label>
+      <input type="text" id="editTimeB" />
+      <label class="field-label">Data e hora</label>
+      <input type="datetime-local" id="editDataHora" />
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="fecharModalEditar()">Cancelar</button>
+        <button class="btn btn-primary" id="btnSalvarEdit" onclick="salvarEdicaoJogo()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ── Configuração Supabase ─────────────────────────────────────────────────
+    const SUPABASE_URL = 'https://bmepxcnrsofofoswubuu.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_sbF1a0yc7knI0j990Dwi7Q_PfW5hJg2';
+    const { createClient } = supabase;
+    const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const FASES_LABEL = {
+      grupos: 'Grupos', oitavas: 'Oitavas', quartas: 'Quartas',
+      semi: 'Semifinal', terceiro_lugar: '3º Lugar', final: 'Final'
+    };
+
+    let currentUser = null;
+    let jogoEditandoId = null;
+    let jogoResultadoId = null;
+
+    // ── PONTUAÇÃO ─────────────────────────────────────────────────────────────
+    function calcularPontos(pA, pB, gA, gB) {
+      const resultadoPalpite = Math.sign(pA - pB);
+      const resultadoReal = Math.sign(gA - gB);
+      const resultadoCerto = resultadoPalpite === resultadoReal;
+      const exactoA = pA === gA;
+      const exactoB = pB === gB;
+
+      if (pA === gA && pB === gB) return 12;
+      if (resultadoCerto && (exactoA || exactoB)) return 9;
+      if (resultadoCerto) return 6;
+      if (exactoA || exactoB) return 3;
+      return 0;
+    }
+
+    // ── INIT ──────────────────────────────────────────────────────────────────
+    async function init() {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) { window.location.href = 'index.html'; return; }
+      currentUser = session.user;
+
+      const { data: perfil } = await sb.schema('app_bolao').from('perfis')
+        .select('nome, email, perfil').eq('id', currentUser.id).single();
+
+      if (!perfil || perfil.perfil !== 'admin') {
+        document.getElementById('mainContent').innerHTML = `
+          <div style="text-align:center;padding:80px;color:#718096">
+            <div style="font-size:48px;margin-bottom:16px">🔒</div>
+            <div style="font-size:18px;font-weight:600;color:#1a202c;margin-bottom:8px">Acesso restrito</div>
+            <div style="margin-bottom:24px">Apenas administradores podem acessar esta página.</div>
+            <a href="palpites.html" style="color:#1d327b;font-weight:600">← Voltar para meus palpites</a>
+          </div>`;
+        return;
+      }
+
+      document.getElementById('userName').textContent = perfil.nome || perfil.email;
+      renderAdmin();
+    }
+
+    function renderAdmin() {
+      document.getElementById('mainContent').innerHTML = `
+        <div class="section-tabs">
+          <button class="stab active" onclick="switchTab('jogos')">⚽ Jogos e Resultados</button>
+          <button class="stab" onclick="switchTab('usuarios')">👥 Participantes</button>
+          <button class="stab" onclick="switchTab('pontuacao')">📊 Regras de Pontuação</button>
+        </div>
+        <div class="stab-panel active" id="stab-jogos">
+          <div class="loading"><div class="spinner"></div><br>Carregando jogos...</div>
+        </div>
+        <div class="stab-panel" id="stab-usuarios">
+          <div class="loading"><div class="spinner"></div><br>Carregando participantes...</div>
+        </div>
+        <div class="stab-panel" id="stab-pontuacao">
+          ${renderPontuacaoLegenda()}
+        </div>`;
+      carregarJogos();
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.stab').forEach((b, i) => {
+        const tabs = ['jogos', 'usuarios', 'pontuacao'];
+        b.classList.toggle('active', tabs[i] === tab);
+      });
+      document.querySelectorAll('.stab-panel').forEach(p => p.classList.remove('active'));
+      document.getElementById(`stab-${tab}`).classList.add('active');
+      if (tab === 'usuarios') carregarUsuarios();
+    }
+
+    // ── JOGOS ─────────────────────────────────────────────────────────────────
+    async function carregarJogos() {
+      const { data: jogos } = await sb.schema('app_bolao').from('jogos')
+        .select('*').eq('ativo', true).order('fase').order('rodada').order('data_hora');
+      if (!jogos) return;
+
+      const fasesOrdem = ['grupos', 'oitavas', 'quartas', 'semi', 'terceiro_lugar', 'final'];
+      const grupos = {};
+      jogos.forEach(j => {
+        if (!grupos[j.fase]) grupos[j.fase] = [];
+        grupos[j.fase].push(j);
+      });
+
+      let html = '';
+      fasesOrdem.forEach(fase => {
+        if (!grupos[fase]) return;
+        html += `<div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="fase-tag fase-${fase}">${FASES_LABEL[fase]}</span></div>
+          </div>
+          <table>
+            <thead><tr>
+              <th>Rod.</th><th>Jogo</th>
+              <th class="col-hide">Data/Hora</th>
+              <th>Resultado</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr></thead>
+            <tbody>`;
+        grupos[fase].forEach(j => {
+          const temResult = j.gols_a !== null && j.gols_b !== null;
+          const dataFmt = new Date(j.data_hora).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+          const resultHtml = temResult
+            ? `<span class="result-display">${j.gols_a} × ${j.gols_b}</span>`
+            : `<span class="result-empty">Não lançado</span>`;
+          const statusHtml = j.finalizado
+            ? `<span class="status-tag status-ok">✅ Finalizado</span>`
+            : `<span class="status-tag status-pen">⏳ Pendente</span>`;
+
+          html += `<tr>
+            <td style="color:#718096">${j.rodada}</td>
+            <td style="font-weight:600">${j.time_a} × ${j.time_b}</td>
+            <td class="col-hide" style="color:#718096;font-size:12px">${dataFmt}</td>
+            <td>${resultHtml}</td>
+            <td>${statusHtml}</td>
+            <td>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="btn btn-outline" onclick="abrirModalEditar(${j.id},'${esc(j.time_a)}','${esc(j.time_b)}','${j.data_hora}')">✏️ Editar</button>
+                <button class="btn btn-success" onclick="abrirModalResultado(${j.id},'${esc(j.time_a)}','${esc(j.time_b)}',${j.gols_a ?? 0},${j.gols_b ?? 0})">🏁 Resultado</button>
+              </div>
+            </td>
+          </tr>`;
+        });
+        html += '</tbody></table></div>';
+      });
+
+      document.getElementById('stab-jogos').innerHTML = html || '<div class="loading">Nenhum jogo.</div>';
+    }
+
+    function esc(str) { return String(str).replace(/'/g, "\\'"); }
+
+    // ── MODAL RESULTADO ───────────────────────────────────────────────────────
+    function abrirModalResultado(jogoId, timeA, timeB, gA, gB) {
+      jogoResultadoId = jogoId;
+      document.getElementById('modalTeams').textContent = `${timeA} × ${timeB}`;
+      document.getElementById('resA').value = gA;
+      document.getElementById('resB').value = gB;
+      document.getElementById('modalResultado').classList.add('open');
+    }
+    function fecharModal() {
+      document.getElementById('modalResultado').classList.remove('open');
+      jogoResultadoId = null;
+    }
+
+    async function salvarResultado() {
+      const gA = parseInt(document.getElementById('resA').value);
+      const gB = parseInt(document.getElementById('resB').value);
+      if (isNaN(gA) || isNaN(gB)) return showToast('Informe o placar.', 'err');
+
+      const btn = document.getElementById('btnSalvarRes');
+      btn.disabled = true;
+      btn.textContent = 'Calculando...';
+
+      // 1. Atualiza o jogo
+      const { error: errJogo } = await sb.schema('app_bolao').from('jogos')
+        .update({ gols_a: gA, gols_b: gB, finalizado: true })
+        .eq('id', jogoResultadoId);
+      if (errJogo) {
+        showToast('Erro ao salvar resultado.', 'err');
+        btn.disabled = false; btn.textContent = 'Confirmar e calcular pontos';
+        return;
+      }
+
+      // 2. Busca todos os participantes ativos
+      const { data: perfis } = await sb.schema('app_bolao').from('perfis')
+        .select('id').eq('ativo', true);
+
+      // 3. Busca palpites do jogo
+      const { data: palpites } = await sb.schema('app_bolao').from('palpites')
+        .select('*').eq('jogo_id', jogoResultadoId);
+      const palpiteMap = {};
+      (palpites || []).forEach(p => palpiteMap[p.usuario_id] = p);
+
+      // 4. Para cada participante, calcula e upserta palpite + pontos
+      for (const perfil of perfis || []) {
+        const p = palpiteMap[perfil.id];
+        const pA = p ? p.palpite_a : 0;
+        const pB = p ? p.palpite_b : 0;
+        const pts = calcularPontos(pA, pB, gA, gB);
+
+        await sb.schema('app_bolao').from('palpites').upsert({
+          usuario_id: perfil.id,
+          jogo_id: jogoResultadoId,
+          palpite_a: pA,
+          palpite_b: pB,
+          pontos: pts,
+          atualizado_em: new Date().toISOString(),
+          ativo: true
+        }, { onConflict: 'usuario_id,jogo_id' });
+      }
+
+      // 5. Recalcula pontos_total de cada participante
+      for (const perfil of perfis || []) {
+        const { data: todosPalpites } = await sb.schema('app_bolao').from('palpites')
+          .select('pontos').eq('usuario_id', perfil.id).eq('ativo', true);
+        const total = (todosPalpites || []).reduce((s, p) => s + (p.pontos ?? 0), 0);
+        await sb.schema('app_bolao').from('perfis')
+          .update({ pontos_total: total }).eq('id', perfil.id);
+      }
+
+      // 6. Registra no log
+      await sb.schema('app_bolao').from('log_alteracoes').insert({
+        usuario_id: currentUser.id,
+        usuario_email: currentUser.email,
+        tabela_ref: 'jogos',
+        registro_id: jogoResultadoId,
+        campo: 'resultado',
+        valor_anterior: null,
+        valor_novo: `${gA}x${gB}`
+      });
+
+      showToast(`✅ Resultado ${gA}×${gB} salvo! Pontos recalculados.`, 'ok');
+      fecharModal();
+      carregarJogos();
+      btn.disabled = false;
+      btn.textContent = 'Confirmar e calcular pontos';
+    }
+
+    // ── MODAL EDITAR JOGO ─────────────────────────────────────────────────────
+    function abrirModalEditar(id, timeA, timeB, dataHora) {
+      jogoEditandoId = id;
+      document.getElementById('editTimeA').value = timeA;
+      document.getElementById('editTimeB').value = timeB;
+      // Formata para datetime-local
+      const d = new Date(dataHora);
+      const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+        .toISOString().slice(0, 16);
+      document.getElementById('editDataHora').value = local;
+      document.getElementById('modalEditarJogo').classList.add('open');
+    }
+    function fecharModalEditar() {
+      document.getElementById('modalEditarJogo').classList.remove('open');
+      jogoEditandoId = null;
+    }
+
+    async function salvarEdicaoJogo() {
+      const timeA = document.getElementById('editTimeA').value.trim();
+      const timeB = document.getElementById('editTimeB').value.trim();
+      const dataHora = document.getElementById('editDataHora').value;
+      if (!timeA || !timeB || !dataHora) return showToast('Preencha todos os campos.', 'err');
+
+      const btn = document.getElementById('btnSalvarEdit');
+      btn.disabled = true;
+      const { error } = await sb.schema('app_bolao').from('jogos')
+        .update({ time_a: timeA, time_b: timeB, data_hora: new Date(dataHora).toISOString() })
+        .eq('id', jogoEditandoId);
+
+      if (error) showToast('Erro ao salvar.', 'err');
+      else {
+        await sb.schema('app_bolao').from('log_alteracoes').insert({
+          usuario_id: currentUser.id,
+          usuario_email: currentUser.email,
+          tabela_ref: 'jogos',
+          registro_id: jogoEditandoId,
+          campo: 'edicao',
+          valor_anterior: null,
+          valor_novo: `${timeA} x ${timeB} | ${dataHora}`
+        });
+        showToast('✅ Jogo atualizado.', 'ok');
+        fecharModalEditar();
+        carregarJogos();
+      }
+      btn.disabled = false;
+    }
+
+    // ── USUÁRIOS ──────────────────────────────────────────────────────────────
+    async function carregarUsuarios() {
+      const { data: perfis } = await sb.schema('app_bolao').from('perfis')
+        .select('*').order('pontos_total', { ascending: false });
+      if (!perfis) return;
+
+      let rows = '';
+      perfis.forEach((p, i) => {
+        rows += `<tr>
+          <td>${i + 1}</td>
+          <td><div style="font-weight:600">${p.nome || '—'}</div><div style="font-size:11px;color:#a0aec0">${p.email}</div></td>
+          <td><span class="fase-tag ${p.perfil === 'admin' ? 'fase-final' : 'fase-grupos'}">${p.perfil}</span></td>
+          <td style="font-weight:700;color:#1d327b">${p.pontos_total ?? 0}</td>
+          <td><span class="status-tag ${p.ativo ? 'status-ok' : 'status-pen'}">${p.ativo ? 'Ativo' : 'Inativo'}</span></td>
+        </tr>`;
+      });
+
+      document.getElementById('stab-usuarios').innerHTML = `
+        <div class="card">
+          <div class="card-header"><div class="card-title">👥 Participantes (${perfis.length})</div></div>
+          <table>
+            <thead><tr>
+              <th>#</th><th>Participante</th><th>Perfil</th><th>Pontos</th><th>Status</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    }
+
+    // ── LEGENDA PONTUAÇÃO ─────────────────────────────────────────────────────
+    function renderPontuacaoLegenda() {
+      return `
+        <div class="card">
+          <div class="card-header"><div class="card-title">📊 Regras de Pontuação</div></div>
+          <div style="padding:20px">
+            <div class="pts-legend">
+              <div class="pts-legend-title">Como os pontos são calculados</div>
+              <div class="pts-row"><span class="pts-badge-lg pts-12">12 pts</span> 🏆 Placar exato (ex: palpitou 2×1, deu 2×1)</div>
+              <div class="pts-row"><span class="pts-badge-lg pts-9">9 pts</span> ⭐ Resultado certo + placar de um time certo</div>
+              <div class="pts-row"><span class="pts-badge-lg pts-6">6 pts</span> ✅ Só o resultado certo (quem ganhou ou empate)</div>
+              <div class="pts-row"><span class="pts-badge-lg pts-3">3 pts</span> Errou resultado mas acertou gols de um time</div>
+              <div class="pts-row"><span class="pts-badge-lg pts-0">0 pts</span> Errou tudo</div>
+            </div>
+            <div style="font-size:13px;color:#718096;line-height:1.7">
+              <strong style="color:#1a202c">Palpite não registrado:</strong> é automaticamente computado como 0×0 no momento do cálculo.<br>
+              <strong style="color:#1a202c">Trava de palpites:</strong> ao atingir o horário do jogo, os inputs são bloqueados automaticamente no frontend e a RLS do Supabase bloqueia qualquer tentativa no backend.<br>
+              <strong style="color:#1a202c">Recálculo automático:</strong> ao lançar um resultado no admin, todos os palpitantes daquele jogo têm seus pontos recalculados imediatamente e o total é atualizado.
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function showToast(msg, type = 'info') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = `toast ${type} show`;
+      setTimeout(() => t.className = `toast ${type}`, 3500);
+    }
+
+    async function logout() {
+      await sb.auth.signOut();
+      window.location.href = 'index.html';
+    }
+
+    // Fecha modais ao clicar fora
+    document.getElementById('modalResultado').addEventListener('click', e => {
+      if (e.target === e.currentTarget) fecharModal();
+    });
+    document.getElementById('modalEditarJogo').addEventListener('click', e => {
+      if (e.target === e.currentTarget) fecharModalEditar();
+    });
+
+    init();
+  </script>
+</body>
+</html>

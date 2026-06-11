@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Classificação — Bolão Copa 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Outfit', sans-serif; background: #f0f4f8; color: #1a202c; }
+
+    .topbar {
+      background: linear-gradient(135deg, #1d327b, #162666);
+      border-bottom: 3px solid #25bbee;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar-brand { font-size: 18px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+    .topbar-brand span { color: #25bbee; }
+    .topbar-nav { display: flex; gap: 6px; }
+    .nav-link {
+      padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 500;
+      color: rgba(255,255,255,0.75); text-decoration: none; transition: all 0.2s;
+    }
+    .nav-link:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .nav-link.active { background: rgba(37,187,238,0.2); color: #25bbee; }
+    .topbar-user { display: flex; align-items: center; gap: 12px; }
+    .user-name { font-size: 13px; color: rgba(255,255,255,0.8); }
+    .btn-logout {
+      background: none; border: 1px solid rgba(255,255,255,0.3); color: rgba(255,255,255,0.7);
+      border-radius: 6px; padding: 4px 12px; font-family: 'Outfit', sans-serif;
+      font-size: 12px; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-logout:hover { border-color: #fff; color: #fff; }
+
+    .main { max-width: 860px; margin: 0 auto; padding: 28px 16px; }
+
+    .page-title {
+      font-size: 20px; font-weight: 700; color: #1d327b; margin-bottom: 6px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .page-sub { font-size: 13px; color: #718096; margin-bottom: 24px; }
+
+    /* PÓDIO */
+    .podio {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 12px;
+      margin-bottom: 32px;
+      padding: 24px 16px 0;
+    }
+    .podio-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .podio-avatar {
+      width: 56px; height: 56px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 700; color: #fff;
+    }
+    .podio-1 .podio-avatar { background: linear-gradient(135deg, #f6d365, #fda085); width: 68px; height: 68px; font-size: 26px; }
+    .podio-2 .podio-avatar { background: linear-gradient(135deg, #a8b2d8, #8898aa); }
+    .podio-3 .podio-avatar { background: linear-gradient(135deg, #f7cba0, #e8956d); }
+    .podio-nome { font-size: 13px; font-weight: 600; color: #1a202c; text-align: center; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .podio-pts { font-size: 16px; font-weight: 700; color: #1d327b; }
+    .podio-pos { font-size: 11px; color: #718096; }
+    .podio-pedestal {
+      width: 90px; background: #1d327b; border-radius: 6px 6px 0 0;
+      display: flex; align-items: center; justify-content: center;
+      color: #25bbee; font-size: 28px; font-weight: 800;
+    }
+    .podio-1 .podio-pedestal { height: 80px; }
+    .podio-2 .podio-pedestal { height: 60px; }
+    .podio-3 .podio-pedestal { height: 45px; }
+
+    /* TABELA */
+    .card {
+      background: #fff; border: 1px solid #d0d8e8; border-radius: 8px; overflow: hidden;
+    }
+    .card-header {
+      padding: 16px 20px; border-bottom: 1px solid #e2e8f0;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-title { font-size: 15px; font-weight: 600; color: #1a202c; }
+    .update-info { font-size: 11px; color: #a0aec0; }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      background: #f7fafc; color: #718096; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 16px;
+      text-align: left; border-bottom: 1px solid #e2e8f0;
+    }
+    thead th.right { text-align: right; }
+    tbody tr { border-bottom: 1px solid #e2e8f0; transition: background 0.15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f0f7ff; }
+    tbody tr.eu { background: #eff6ff; }
+    tbody tr.eu:hover { background: #dbeafe; }
+    td { padding: 12px 16px; font-size: 14px; }
+    td.right { text-align: right; }
+
+    .pos-badge {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+    }
+    .pos-1 { background: #fef3c7; color: #b45309; }
+    .pos-2 { background: #f1f5f9; color: #64748b; }
+    .pos-3 { background: #fff7ed; color: #c2410c; }
+    .pos-n { background: #f0f4f8; color: #718096; }
+
+    .jogador-nome { font-weight: 600; color: #1a202c; }
+    .jogador-email { font-size: 12px; color: #a0aec0; }
+    .pts-total { font-size: 16px; font-weight: 700; color: #1d327b; text-align: right; }
+    .stat-col { font-size: 13px; color: #4a5568; text-align: right; }
+
+    .loading { text-align: center; padding: 60px; color: #718096; font-size: 15px; }
+    .spinner { display: inline-block; width: 28px; height: 28px; border: 3px solid #d0d8e8; border-top-color: #1d327b; border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .live-dot {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+      background: #25bbee; animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    @media (max-width: 600px) {
+      .topbar-nav { display: none; }
+      .podio { gap: 6px; }
+      .podio-pedestal { width: 72px; }
+      .col-hide { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-brand">⚽ Bolão Copa <span>2026</span></div>
+    <nav class="topbar-nav">
+      <a href="palpites.html" class="nav-link">Meus Palpites</a>
+      <a href="classificacao.html" class="nav-link active">Classificação</a>
+    </nav>
+    <div class="topbar-user">
+      <span class="user-name" id="userName"></span>
+      <button class="btn-logout" onclick="logout()" id="btnLogout" style="display:none">Sair</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="page-title">🏆 Classificação Geral</div>
+    <div class="page-sub">Atualização em tempo real conforme os resultados são lançados</div>
+
+    <div id="podioWrap"></div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Ranking completo</div>
+        <div class="update-info"><span class="live-dot"></span> Ao vivo</div>
+      </div>
+      <div id="tabelaWrap">
+        <div class="loading"><div class="spinner"></div><br>Carregando ranking...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── Configuração Supabase ─────────────────────────────────────────────────
+    const SUPABASE_URL = 'https://bmepxcnrsofofoswubuu.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_sbF1a0yc7knI0j990Dwi7Q_PfW5hJg2';
+    const { createClient } = supabase;
+    const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUserId = null;
+
+    async function init() {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        currentUserId = session.user.id;
+        const { data: perfil } = await sb.schema('app_bolao').from('perfis')
+          .select('nome, email').eq('id', session.user.id).single();
+        document.getElementById('userName').textContent = perfil?.nome || session.user.email;
+        document.getElementById('btnLogout').style.display = 'block';
+      }
+      await carregarRanking();
+      // Tempo real — escuta mudanças em perfis
+      sb.channel('ranking-changes')
+        .on('postgres_changes', { event: '*', schema: 'app_bolao', table: 'perfis' }, carregarRanking)
+        .subscribe();
+    }
+
+    async function carregarRanking() {
+      const { data: jogadores } = await sb.schema('app_bolao').from('perfis')
+        .select('id, nome, email, pontos_total')
+        .eq('ativo', true)
+        .order('pontos_total', { ascending: false });
+
+      if (!jogadores || jogadores.length === 0) {
+        document.getElementById('tabelaWrap').innerHTML = '<div class="loading">Nenhum participante ainda.</div>';
+        document.getElementById('podioWrap').innerHTML = '';
+        return;
+      }
+
+      // Buscar estatísticas de palpites
+      const { data: palpites } = await sb.schema('app_bolao').from('palpites')
+        .select('usuario_id, pontos').eq('ativo', true);
+
+      const stats = {};
+      (palpites || []).forEach(p => {
+        if (!stats[p.usuario_id]) stats[p.usuario_id] = { exatos: 0, acertos: 0 };
+        if (p.pontos === 12) stats[p.usuario_id].exatos++;
+        if (p.pontos >= 6) stats[p.usuario_id].acertos++;
+      });
+
+      renderPodio(jogadores.slice(0, 3), stats);
+      renderTabela(jogadores, stats);
+    }
+
+    function renderPodio(top, stats) {
+      if (top.length < 1) { document.getElementById('podioWrap').innerHTML = ''; return; }
+      const ordem = [top[1], top[0], top[2]].filter(Boolean);
+      const classes = top[1] ? ['podio-2', 'podio-1', 'podio-3'] : ['podio-1'];
+      const medalhas = ['🥈', '🥇', '🥉'];
+      const nums = [2, 1, 3];
+
+      let html = '<div class="podio">';
+      ordem.forEach((j, i) => {
+        const inicial = (j.nome || j.email || '?')[0].toUpperCase();
+        const pts = j.pontos_total ?? 0;
+        html += `<div class="podio-item ${classes[i]}">
+          <div class="podio-avatar">${inicial}</div>
+          <div class="podio-nome">${j.nome || j.email}</div>
+          <div class="podio-pts">${pts} pts</div>
+          <div class="podio-pedestal">${medalhas[i]}</div>
+        </div>`;
+      });
+      html += '</div>';
+      document.getElementById('podioWrap').innerHTML = html;
+    }
+
+    function renderTabela(jogadores, stats) {
+      let rows = '';
+      jogadores.forEach((j, idx) => {
+        const pos = idx + 1;
+        const posClass = pos <= 3 ? `pos-${pos}` : 'pos-n';
+        const euClass = j.id === currentUserId ? ' eu' : '';
+        const s = stats[j.id] || { exatos: 0, acertos: 0 };
+        rows += `<tr class="${euClass}">
+          <td><span class="pos-badge ${posClass}">${pos}</span></td>
+          <td>
+            <div class="jogador-nome">${j.nome || '—'}${j.id === currentUserId ? ' <span style="font-size:11px;color:#25bbee;font-weight:500">(você)</span>' : ''}</div>
+            <div class="jogador-email">${j.email}</div>
+          </td>
+          <td class="pts-total">${j.pontos_total ?? 0}</td>
+          <td class="stat-col col-hide">🏆 ${s.exatos}</td>
+          <td class="stat-col col-hide">✅ ${s.acertos}</td>
+        </tr>`;
+      });
+
+      document.getElementById('tabelaWrap').innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Participante</th>
+              <th class="right">Pontos</th>
+              <th class="right col-hide">Placar exato</th>
+              <th class="right col-hide">Resultado certo</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    async function logout() {
+      await sb.auth.signOut();
+      window.location.href = 'index.html';
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -452,30 +452,39 @@
       (palpites || []).forEach(p => palpiteMap[p.usuario_id] = p);
 
       // 4. Para cada participante, calcula e upserta palpite + pontos
+      const agora_iso = new Date().toISOString();
+      const usuariosAtualizados = new Set();
+
       for (const perfil of perfis || []) {
         const p = palpiteMap[perfil.id];
         const pA = p ? p.palpite_a : 0;
         const pB = p ? p.palpite_b : 0;
         const pts = calcularPontos(pA, pB, gA, gB);
 
-        await sb.schema('app_bolao').from('palpites').upsert({
+        const { error: errPal } = await sb.schema('app_bolao').from('palpites').upsert({
           usuario_id: perfil.id,
           jogo_id: jogoResultadoId,
           palpite_a: pA,
           palpite_b: pB,
           pontos: pts,
-          atualizado_em: new Date().toISOString(),
+          criado_em: agora_iso,
+          atualizado_em: agora_iso,
           ativo: true
-        }, { onConflict: 'usuario_id,jogo_id' });
+        }, { onConflict: 'usuario_id,jogo_id', ignoreDuplicates: false });
+
+        if (!errPal) usuariosAtualizados.add(perfil.id);
       }
 
-      // 5. Recalcula pontos_total de cada participante
-      for (const perfil of perfis || []) {
-        const { data: todosPalpites } = await sb.schema('app_bolao').from('palpites')
-          .select('pontos').eq('usuario_id', perfil.id).eq('ativo', true);
+      // 5. Recalcula pontos_total de cada participante com palpite salvo
+      let errosRanking = 0;
+      for (const userId of usuariosAtualizados) {
+        const { data: todosPalpites, error: errBusca } = await sb.schema('app_bolao').from('palpites')
+          .select('pontos').eq('usuario_id', userId).eq('ativo', true).not('pontos', 'is', null);
+        if (errBusca) { errosRanking++; continue; }
         const total = (todosPalpites || []).reduce((s, p) => s + (p.pontos ?? 0), 0);
-        await sb.schema('app_bolao').from('perfis')
-          .update({ pontos_total: total }).eq('id', perfil.id);
+        const { error: errPerfil } = await sb.schema('app_bolao').from('perfis')
+          .update({ pontos_total: total }).eq('id', userId);
+        if (errPerfil) errosRanking++;
       }
 
       // 6. Registra no log
@@ -489,7 +498,10 @@
         valor_novo: `${gA}x${gB}`
       });
 
-      showToast(`✅ Resultado ${gA}×${gB} salvo! Pontos recalculados.`, 'ok');
+      const msgFinal = errosRanking > 0
+        ? `⚠️ Resultado salvo, mas ${errosRanking} ranking(s) não atualizaram. Verifique a policy do Supabase.`
+        : `✅ Resultado ${gA}×${gB} salvo! ${usuariosAtualizados.size} pontuações atualizadas.`;
+      showToast(msgFinal, errosRanking > 0 ? 'err' : 'ok');
       fecharModal();
       carregarJogos();
       btn.disabled = false;

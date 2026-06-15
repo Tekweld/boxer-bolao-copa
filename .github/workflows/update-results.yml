@@ -1,0 +1,29 @@
+name: Robô de Resultados Copa 2026
+
+on:
+  schedule:
+    # Roda a cada 30 minutos
+    - cron: '0,30 * * * *'
+  # Permite disparo manual pelo GitHub → Actions → Run workflow
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Rodar robô de resultados
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: node scripts/update-results.js

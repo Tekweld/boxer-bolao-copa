@@ -445,34 +445,42 @@
       const { data: perfis } = await sb.schema('app_bolao').from('perfis')
         .select('id').eq('ativo', true);
 
-      // 3. Busca palpites do jogo
+      // 3. Busca palpites do jogo — lê todos os registros existentes
       const { data: palpites } = await sb.schema('app_bolao').from('palpites')
-        .select('*').eq('jogo_id', jogoResultadoId);
+        .select('*').eq('jogo_id', jogoResultadoId).eq('ativo', true);
       const palpiteMap = {};
       (palpites || []).forEach(p => palpiteMap[p.usuario_id] = p);
 
-      // 4. Para cada participante, calcula e upserta palpite + pontos
+      // 4. Para cada participante, calcula pontos sem sobrescrever palpite existente
       const agora_iso = new Date().toISOString();
       const usuariosAtualizados = new Set();
 
       for (const perfil of perfis || []) {
         const p = palpiteMap[perfil.id];
-        const pA = p ? p.palpite_a : 0;
-        const pB = p ? p.palpite_b : 0;
-        const pts = calcularPontos(pA, pB, gA, gB);
 
-        const { error: errPal } = await sb.schema('app_bolao').from('palpites').upsert({
-          usuario_id: perfil.id,
-          jogo_id: jogoResultadoId,
-          palpite_a: pA,
-          palpite_b: pB,
-          pontos: pts,
-          criado_em: agora_iso,
-          atualizado_em: agora_iso,
-          ativo: true
-        }, { onConflict: 'usuario_id,jogo_id', ignoreDuplicates: false });
-
-        if (!errPal) usuariosAtualizados.add(perfil.id);
+        if (p) {
+          // Usuário JÁ palpitou — apenas atualiza pontos, NUNCA sobrescreve palpite_a/palpite_b
+          const pts = calcularPontos(p.palpite_a, p.palpite_b, gA, gB);
+          const { error: errPal } = await sb.schema('app_bolao').from('palpites')
+            .update({ pontos: pts, atualizado_em: agora_iso })
+            .eq('usuario_id', perfil.id)
+            .eq('jogo_id', jogoResultadoId);
+          if (!errPal) usuariosAtualizados.add(perfil.id);
+        } else {
+          // Usuário NÃO palpitou — insere 0×0 com 0 pontos
+          const pts = calcularPontos(0, 0, gA, gB);
+          const { error: errPal } = await sb.schema('app_bolao').from('palpites').insert({
+            usuario_id: perfil.id,
+            jogo_id: jogoResultadoId,
+            palpite_a: 0,
+            palpite_b: 0,
+            pontos: pts,
+            criado_em: agora_iso,
+            atualizado_em: agora_iso,
+            ativo: true
+          });
+          if (!errPal) usuariosAtualizados.add(perfil.id);
+        }
       }
 
       // 5. Recalcula pontos_total de cada participante com palpite salvo

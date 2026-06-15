@@ -90,45 +90,46 @@ const ES_TO_EN = {
 };
 
 // ── Helpers Supabase ──────────────────────────────────────────────────────────
+// Schema app_bolao é passado via header Accept-Profile / Content-Profile
 
-async function sbGet(path) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    headers: {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      'Content-Type': 'application/json',
-    },
+const SB_HEADERS_GET = {
+  apikey: SUPABASE_KEY,
+  Authorization: `Bearer ${SUPABASE_KEY}`,
+  'Accept-Profile': 'app_bolao',
+};
+
+const SB_HEADERS_WRITE = {
+  apikey: SUPABASE_KEY,
+  Authorization: `Bearer ${SUPABASE_KEY}`,
+  'Content-Type': 'application/json',
+  'Content-Profile': 'app_bolao',
+  Prefer: 'return=minimal',
+};
+
+async function sbGet(table, query) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+    headers: SB_HEADERS_GET,
   });
-  if (!r.ok) throw new Error(`GET ${path} → ${r.status} ${await r.text()}`);
+  if (!r.ok) throw new Error(`GET ${table} → ${r.status} ${await r.text()}`);
   return r.json();
 }
 
-async function sbPatch(path, body) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+async function sbPatch(table, query, body) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
     method: 'PATCH',
-    headers: {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=minimal',
-    },
+    headers: SB_HEADERS_WRITE,
     body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error(`PATCH ${path} → ${r.status} ${await r.text()}`);
+  if (!r.ok) throw new Error(`PATCH ${table} → ${r.status} ${await r.text()}`);
 }
 
-async function sbPost(path, body) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+async function sbPost(table, body) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
     method: 'POST',
-    headers: {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      'Content-Type': 'application/json',
-      Prefer: 'resolution=merge-duplicates,return=minimal',
-    },
+    headers: { ...SB_HEADERS_WRITE, Prefer: 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error(`POST ${path} → ${r.status} ${await r.text()}`);
+  if (!r.ok) throw new Error(`POST ${table} → ${r.status} ${await r.text()}`);
 }
 
 // ── Pontuação ─────────────────────────────────────────────────────────────────
@@ -153,7 +154,8 @@ async function main() {
   // 1. Busca jogos pendentes no DB (não finalizados, data já passou)
   const agora = new Date().toISOString();
   const jogos = await sbGet(
-    `jogos?select=id,time_a,time_b,data_hora,gols_a,gols_b,finalizado&schema=app_bolao&finalizado=is.false&data_hora=lt.${agora}&ativo=eq.true`
+    'jogos',
+    `select=id,time_a,time_b,data_hora,gols_a,gols_b,finalizado&finalizado=is.false&data_hora=lt.${encodeURIComponent(agora)}&ativo=eq.true`
   );
 
   if (!jogos.length) {
@@ -175,9 +177,7 @@ async function main() {
   console.log(`⚽ ${fdMatches.length} resultado(s) recebido(s) da API.`);
 
   // 3. Busca todos os perfis ativos (para recalcular pontos_total)
-  const perfis = await sbGet(
-    'perfis?select=id&schema=app_bolao&ativo=eq.true'
-  );
+  const perfis = await sbGet('perfis', 'select=id&ativo=eq.true');
 
   const agoraIso = new Date().toISOString();
   let processados = 0;
@@ -217,13 +217,14 @@ async function main() {
 
     // 4. Atualiza jogo no DB
     await sbPatch(
-      `jogos?id=eq.${jogo.id}&schema=app_bolao`,
+      'jogos', `id=eq.${jogo.id}`,
       { gols_a: gA, gols_b: gB, finalizado: true, atualizado_em: agoraIso }
     );
 
     // 5. Busca palpites deste jogo
     const palpites = await sbGet(
-      `palpites?select=id,usuario_id,palpite_a,palpite_b&schema=app_bolao&jogo_id=eq.${jogo.id}&ativo=eq.true`
+      'palpites',
+      `select=id,usuario_id,palpite_a,palpite_b&jogo_id=eq.${jogo.id}&ativo=eq.true`
     );
     const palpiteMap = {};
     palpites.forEach(p => { palpiteMap[p.usuario_id] = p; });
@@ -233,14 +234,11 @@ async function main() {
       const p = palpiteMap[perfil.id];
       if (p) {
         const pts = calcularPontos(p.palpite_a, p.palpite_b, gA, gB);
-        await sbPatch(
-          `palpites?id=eq.${p.id}&schema=app_bolao`,
-          { pontos: pts, atualizado_em: agoraIso }
-        );
+        await sbPatch('palpites', `id=eq.${p.id}`, { pontos: pts, atualizado_em: agoraIso });
       } else {
         // Participante não palpitou → insere 0×0 com 0 pts
         const pts = calcularPontos(0, 0, gA, gB);
-        await sbPost('palpites?schema=app_bolao', {
+        await sbPost('palpites', {
           usuario_id: perfil.id,
           jogo_id: jogo.id,
           palpite_a: 0,
@@ -263,19 +261,14 @@ async function main() {
 
   // 7. Recalcula pontos_total de todos os participantes
   console.log('🔢 Recalculando pontos_total...');
-  const todosPalpites = await sbGet(
-    'palpites?select=usuario_id,pontos&schema=app_bolao&ativo=eq.true'
-  );
+  const todosPalpites = await sbGet('palpites', 'select=usuario_id,pontos&ativo=eq.true');
   const totais = {};
   todosPalpites.forEach(p => {
     totais[p.usuario_id] = (totais[p.usuario_id] || 0) + (p.pontos || 0);
   });
 
   for (const [uid, total] of Object.entries(totais)) {
-    await sbPatch(
-      `perfis?id=eq.${uid}&schema=app_bolao`,
-      { pontos_total: total, atualizado_em: agoraIso }
-    );
+    await sbPatch('perfis', `id=eq.${uid}`, { pontos_total: total, atualizado_em: agoraIso });
   }
 
   console.log(`🏆 Concluído — ${processados} jogo(s) processado(s).`);

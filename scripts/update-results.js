@@ -276,5 +276,7 @@ async function main() {
 
 main().catch(err => {
   console.error('❌ Erro:', err.message);
+  if (err.cause) console.error('   Causa:', err.cause);
+  console.error(err.stack);
   process.exit(1);
 });

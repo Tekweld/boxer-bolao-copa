@@ -68,7 +68,7 @@ const ES_TO_EN = {
   'Perú': 'Peru',
   'Polonia': 'Poland',
   'Portugal': 'Portugal',
-  'RD Congo': 'DR Congo',
+  'RD Congo': 'Congo DR',
   'República Checa': 'Czechia',
   'Rumania': 'Romania',
   'Rusia': 'Russia',

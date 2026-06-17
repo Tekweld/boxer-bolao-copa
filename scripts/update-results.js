@@ -202,7 +202,11 @@ async function main() {
     });
 
     if (!match) {
-      console.log(`⏳ Sem resultado ainda: ${jogo.time_a} x ${jogo.time_b} (${jogoDataStr})`);
+      // Mostra candidatos próximos pela data para facilitar diagnóstico de nome errado
+      const candidatos = fdMatches
+        .filter(m => Math.abs(new Date((m.utcDate||'').slice(0,10)) - new Date(jogoDataStr)) <= 86400000)
+        .map(m => `"${m.homeTeam?.name}" x "${m.awayTeam?.name}"`);
+      console.log(`⏳ Sem resultado ainda: ${jogo.time_a} (→${nomeA_en}) x ${jogo.time_b} (→${nomeB_en}) | API nesse dia: ${candidatos.join(' | ') || 'nenhum'}`);
       continue;
     }
 

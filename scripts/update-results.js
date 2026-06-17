@@ -160,19 +160,18 @@ async function main() {
       continue;
     }
 
-    // Procura jogo na API pelo nome dos times (data já foi checada no filtro do DB)
+    // Procura jogo na API pelo nome dos times — checa as duas ordens (Copa = campo neutro)
     const jogoDataStr = jogo.data_hora.slice(0, 10); // YYYY-MM-DD
+    const nameMatch = (team, nome) => team?.name === nome || team?.shortName === nome;
     const match = fdMatches.find(m => {
-      const mData = (m.utcDate || '').slice(0, 10);
-      const homeOk = m.homeTeam?.name === nomeA_en || m.homeTeam?.shortName === nomeA_en;
-      const awayOk = m.awayTeam?.name === nomeB_en || m.awayTeam?.shortName === nomeB_en;
-      // Tolerância de ±1 dia para diferença de fuso
-      const dataOk = Math.abs(new Date(mData) - new Date(jogoDataStr)) <= 86400000;
-      return homeOk && awayOk && dataOk;
+      const dataOk = Math.abs(new Date((m.utcDate||'').slice(0,10)) - new Date(jogoDataStr)) <= 86400000;
+      if (!dataOk) return false;
+      const direta  = nameMatch(m.homeTeam, nomeA_en) && nameMatch(m.awayTeam, nomeB_en);
+      const inversa = nameMatch(m.homeTeam, nomeB_en) && nameMatch(m.awayTeam, nomeA_en);
+      return direta || inversa;
     });
 
     if (!match) {
-      // Mostra candidatos próximos pela data para facilitar diagnóstico de nome errado
       const candidatos = fdMatches
         .filter(m => Math.abs(new Date((m.utcDate||'').slice(0,10)) - new Date(jogoDataStr)) <= 86400000)
         .map(m => `"${m.homeTeam?.name}" x "${m.awayTeam?.name}"`);
@@ -180,8 +179,10 @@ async function main() {
       continue;
     }
 
-    const gA = match.score?.fullTime?.home;
-    const gB = match.score?.fullTime?.away;
+    // Garante que gA/gB correspondem a time_a/time_b independente da ordem da API
+    const invertido = nameMatch(match.homeTeam, nomeB_en);
+    const gA = invertido ? match.score?.fullTime?.away : match.score?.fullTime?.home;
+    const gB = invertido ? match.score?.fullTime?.home : match.score?.fullTime?.away;
     if (gA === null || gA === undefined || gB === null || gB === undefined) {
       console.log(`⏳ Placar nulo ainda: ${jogo.time_a} x ${jogo.time_b}`);
       continue;

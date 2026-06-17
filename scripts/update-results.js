@@ -268,7 +268,7 @@ async function main() {
   });
 
   for (const [uid, total] of Object.entries(totais)) {
-    await sbPatch('perfis', `id=eq.${uid}`, { pontos_total: total, atualizado_em: agoraIso });
+    await sbPatch('perfis', `id=eq.${uid}`, { pontos_total: total });
   }
 
   console.log(`🏆 Concluído — ${processados} jogo(s) processado(s).`);

@@ -218,7 +218,7 @@ async function main() {
     // 4. Atualiza jogo no DB
     await sbPatch(
       'jogos', `id=eq.${jogo.id}`,
-      { gols_a: gA, gols_b: gB, finalizado: true, atualizado_em: agoraIso }
+      { gols_a: gA, gols_b: gB, finalizado: true }
     );
 
     // 5. Busca palpites deste jogo

@@ -604,6 +604,7 @@
       ]);
 
       if (errPalpites) console.error('Erro RPC palpites:', errPalpites);
+      console.log('Palpites retornados:', palpites?.length, '| Bruno jogo41:', palpites?.find(p => p.usuario_id === 'a814376a-adea-48f0-878a-466b95d033c4' && String(p.jogo_id) === '41'));
       if (!jogos || !perfis || !palpites) {
         el.innerHTML = '<div class="loading">Erro ao carregar dados.</div>';
         return;

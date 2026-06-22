@@ -600,7 +600,7 @@
       const [{ data: jogos }, { data: perfis }, { data: palpites, error: errPalpites }] = await Promise.all([
         sb.schema('app_bolao').from('jogos').select('*').eq('ativo', true).order('fase').order('rodada').order('data_hora'),
         sb.schema('app_bolao').from('perfis').select('id, nome, email').eq('ativo', true).order('nome'),
-        sb.rpc('admin_get_palpites', {}, { schema: 'app_bolao' })
+        sb.schema('app_bolao').from('palpites').select('*').eq('ativo', true)
       ]);
 
       if (errPalpites) console.error('Erro RPC palpites:', errPalpites);

@@ -597,14 +597,26 @@
       const el = document.getElementById('stab-palpites');
       el.innerHTML = '<div class="loading"><div class="spinner"></div><br>Carregando...</div>';
 
-      const [{ data: jogos }, { data: perfis }, { data: palpites, error: errPalpites }] = await Promise.all([
-        sb.schema('app_bolao').from('jogos').select('*').eq('ativo', true).order('fase').order('rodada').order('data_hora'),
-        sb.schema('app_bolao').from('perfis').select('id, nome, email').eq('ativo', true).order('nome'),
-        sb.schema('app_bolao').from('palpites').select('*').eq('ativo', true).range(0, 9999)
+      const [[{ data: jogos }, { data: perfis }], palpites] = await Promise.all([
+        Promise.all([
+          sb.schema('app_bolao').from('jogos').select('*').eq('ativo', true).order('fase').order('rodada').order('data_hora'),
+          sb.schema('app_bolao').from('perfis').select('id, nome, email').eq('ativo', true).order('nome'),
+        ]),
+        (async () => {
+          const all = [];
+          let from = 0;
+          while (true) {
+            const { data } = await sb.schema('app_bolao').from('palpites')
+              .select('*').eq('ativo', true).range(from, from + 999);
+            if (!data || data.length === 0) break;
+            all.push(...data);
+            if (data.length < 1000) break;
+            from += 1000;
+          }
+          return all;
+        })()
       ]);
 
-      if (errPalpites) console.error('Erro RPC palpites:', errPalpites);
-      console.log('Palpites retornados:', palpites?.length, '| Bruno jogo41:', palpites?.find(p => p.usuario_id === 'a814376a-adea-48f0-878a-466b95d033c4' && String(p.jogo_id) === '41'));
       if (!jogos || !perfis || !palpites) {
         el.innerHTML = '<div class="loading">Erro ao carregar dados.</div>';
         return;

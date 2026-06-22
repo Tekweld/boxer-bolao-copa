@@ -140,7 +140,18 @@
       <div class="brand-sub">Boxer Soldas — Participe e torça pelo seu time!</div>
     </div>
 
-    <div class="card">
+    <!-- REDEFINIR SENHA (aparece quando usuário chega via link de reset) -->
+    <div class="card" id="card-reset" style="display:none">
+      <div style="font-size:15px;font-weight:600;margin-bottom:20px;color:#1a202c">🔑 Redefinir senha</div>
+      <label>Nova senha</label>
+      <input type="password" id="novaSenha" placeholder="Mínimo 6 caracteres" />
+      <label>Confirmar senha</label>
+      <input type="password" id="confirmarSenha" placeholder="Repita a senha" />
+      <button class="btn-primary" id="btnReset" onclick="redefinirSenha()">Salvar nova senha</button>
+      <div class="msg" id="resetMsg"></div>
+    </div>
+
+    <div class="card" id="card-login">
       <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('login')">Entrar</button>
         <button class="tab-btn" onclick="switchTab('cadastro')">Criar Conta</button>
@@ -168,6 +179,7 @@
         <div class="msg" id="cadMsg"></div>
       </div>
     </div>
+    </div><!-- /card-login -->
 
     <div class="footer-links">
       <a href="classificacao.html">Ver ranking público</a>
@@ -181,11 +193,40 @@
     const { createClient } = supabase;
     const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Redireciona se já logado
+    // Detecta link de reset de senha no hash da URL
     (async () => {
+      const hash = window.location.hash;
+      if (hash.includes('type=recovery') || hash.includes('access_token')) {
+        // Supabase coloca o token no hash — processa a sessão automaticamente
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) {
+          document.getElementById('card-login').style.display = 'none';
+          document.getElementById('card-reset').style.display = 'block';
+          return;
+        }
+      }
       const { data: { session } } = await sb.auth.getSession();
       if (session) window.location.href = 'palpites.html';
     })();
+
+    async function redefinirSenha() {
+      const senha = document.getElementById('novaSenha').value;
+      const confirmar = document.getElementById('confirmarSenha').value;
+      const btn = document.getElementById('btnReset');
+      if (senha.length < 6) return showMsg('resetMsg', 'Senha deve ter ao menos 6 caracteres.', 'error');
+      if (senha !== confirmar) return showMsg('resetMsg', 'As senhas não coincidem.', 'error');
+      btn.disabled = true;
+      btn.textContent = 'Salvando...';
+      const { error } = await sb.auth.updateUser({ password: senha });
+      if (error) {
+        showMsg('resetMsg', 'Erro ao redefinir senha. Tente novamente.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Salvar nova senha';
+      } else {
+        showMsg('resetMsg', 'Senha redefinida! Redirecionando...', 'success');
+        setTimeout(() => window.location.href = 'palpites.html', 1500);
+      }
+    }
 
     function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach((b, i) => {

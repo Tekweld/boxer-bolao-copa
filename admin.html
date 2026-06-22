@@ -615,10 +615,12 @@
       perfis.forEach(p => perfilMap[p.id] = p);
 
       // Mapa de palpites: palpiteMap[jogo_id][usuario_id]
+      // Força string para garantir match independente do tipo (int vs string)
       const palpiteMap = {};
       palpites.forEach(p => {
-        if (!palpiteMap[p.jogo_id]) palpiteMap[p.jogo_id] = {};
-        palpiteMap[p.jogo_id][p.usuario_id] = p;
+        const key = String(p.jogo_id);
+        if (!palpiteMap[key]) palpiteMap[key] = {};
+        palpiteMap[key][p.usuario_id] = p;
       });
 
       el.innerHTML = `
@@ -677,7 +679,7 @@
               </tr></thead>
               <tbody>`;
 
-          const palpitesJogo = palpiteMap[jogo.id] || {};
+          const palpitesJogo = palpiteMap[String(jogo.id)] || {};
           perfis.forEach(p => {
             const pal = palpitesJogo[p.id];
             const palpiteStr = pal ? `${pal.palpite_a} × ${pal.palpite_b}` : '<span style="color:#a0aec0;font-style:italic">Não palpitou</span>';
@@ -733,7 +735,7 @@
             <tbody>`;
 
         jogos.forEach(jogo => {
-          const pal = (palpiteMap[jogo.id] || {})[perfil.id];
+          const pal = (palpiteMap[String(jogo.id)] || {})[perfil.id];
           const palpiteStr = pal ? `${pal.palpite_a} × ${pal.palpite_b}` : '<span style="color:#a0aec0;font-style:italic">—</span>';
           const resultadoStr = jogo.finalizado ? `${jogo.gols_a} × ${jogo.gols_b}` : '<span style="color:#a0aec0">—</span>';
           const ptsBadge = pal?.pontos != null

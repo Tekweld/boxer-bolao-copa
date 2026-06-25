@@ -259,6 +259,7 @@
 
     const FASES_LABEL = {
       grupos: 'Fase de Grupos',
+      dieciseisavos: 'Dezesseis Avos de Final',
       oitavas: 'Oitavas de Final',
       quartas: 'Quartas de Final',
       semi: 'Semifinais',
@@ -311,7 +312,7 @@
         grupos[j.fase][j.rodada].push(j);
       });
 
-      const fasesOrdem = ['grupos', 'oitavas', 'quartas', 'semi', 'terceiro_lugar', 'final'];
+      const fasesOrdem = ['grupos', 'dieciseisavos', 'oitavas', 'quartas', 'semi', 'terceiro_lugar', 'final'];
       let html = '';
 
       fasesOrdem.forEach(fase => {

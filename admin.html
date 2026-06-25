@@ -238,7 +238,7 @@
     const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const FASES_LABEL = {
-      grupos: 'Grupos', oitavas: 'Oitavas', quartas: 'Quartas',
+      grupos: 'Grupos', dieciseisavos: 'Dezesseis Avos', oitavas: 'Oitavas', quartas: 'Quartas',
       semi: 'Semifinal', terceiro_lugar: '3º Lugar', final: 'Final'
     };
 
@@ -325,7 +325,7 @@
         .select('*').eq('ativo', true).order('fase').order('rodada').order('data_hora');
       if (!jogos) return;
 
-      const fasesOrdem = ['grupos', 'oitavas', 'quartas', 'semi', 'terceiro_lugar', 'final'];
+      const fasesOrdem = ['grupos', 'dieciseisavos', 'oitavas', 'quartas', 'semi', 'terceiro_lugar', 'final'];
       const grupos = {};
       jogos.forEach(j => {
         if (!grupos[j.fase]) grupos[j.fase] = [];

@@ -68,37 +68,77 @@
     /* MAIN */
     .main { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
 
-    /* FASE HEADER */
-    .fase-header {
+    /* ACORDEÃO DE FASE */
+    .fase-accordion { margin-bottom: 12px; border-radius: 10px; overflow: hidden; border: 1px solid #d0d8e8; }
+    .fase-accordion-header {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin: 28px 0 16px;
-    }
-    .fase-header:first-child { margin-top: 0; }
-    .fase-badge {
+      justify-content: space-between;
+      padding: 14px 18px;
       background: #1d327b;
-      color: #fff;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s;
+      gap: 12px;
+    }
+    .fase-accordion-header:hover { background: #162666; }
+    .fase-accordion-header.aberta { background: #162666; border-bottom: 2px solid #25bbee; }
+    .fase-accordion-left { display: flex; align-items: center; gap: 10px; }
+    .fase-badge {
+      background: rgba(37,187,238,0.2);
+      color: #25bbee;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.8px;
-      padding: 4px 12px;
+      padding: 3px 10px;
       border-radius: 20px;
+      border: 1px solid rgba(37,187,238,0.3);
     }
-    .fase-line { flex: 1; height: 1px; background: #d0d8e8; }
+    .fase-resumo { font-size: 12px; color: rgba(255,255,255,0.55); }
+    .fase-arrow { color: #25bbee; font-size: 14px; transition: transform 0.3s; flex-shrink: 0; }
+    .fase-arrow.aberta { transform: rotate(90deg); }
+    .fase-accordion-body {
+      background: #f8fafc;
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.4s ease;
+    }
+    .fase-accordion-body.aberta { max-height: 99999px; }
+    .fase-body-inner { padding: 16px; }
 
-    /* RODADA */
-    .rodada-wrap { margin-bottom: 8px; }
+    /* ACORDEÃO DE RODADA */
+    .rodada-accordion { margin-bottom: 10px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; }
+    .rodada-accordion-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: #edf2f7;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s;
+    }
+    .rodada-accordion-header:hover { background: #e2e8f0; }
+    .rodada-accordion-header.aberta { background: #e2e8f0; }
     .rodada-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: #718096;
+      font-size: 12px;
+      font-weight: 700;
+      color: #4a5568;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      margin-bottom: 10px;
-      padding-left: 4px;
     }
+    .rodada-resumo { font-size: 11px; color: #718096; }
+    .rodada-arrow { color: #718096; font-size: 12px; transition: transform 0.3s; }
+    .rodada-arrow.aberta { transform: rotate(90deg); }
+    .rodada-accordion-body {
+      background: #fff;
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.4s ease;
+    }
+    .rodada-accordion-body.aberta { max-height: 99999px; }
+    .rodada-body-inner { padding: 12px; }
 
     /* JOGO CARD */
     .jogo-card {
@@ -164,7 +204,6 @@
     .rodada-footer {
       display: flex;
       justify-content: flex-end;
-      margin-bottom: 20px;
       margin-top: 6px;
     }
     .btn-salvar {
@@ -214,6 +253,7 @@
       .topbar-nav { display: none; }
       .time-nome { font-size: 12px; }
       .placar-input { width: 40px; height: 40px; font-size: 16px; }
+      .fase-resumo { display: none; }
     }
   </style>
 </head>
@@ -251,7 +291,6 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    // ── Configuração Supabase ─────────────────────────────────────────────────
     const SUPABASE_URL = 'https://bmepxcnrsofofoswubuu.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZXB4Y25yc29mb2Zvc3d1YnV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTczNzMsImV4cCI6MjA5NTI5MzM3M30.S55ouFczRYlUYNFf5PotYKXBPT5idypTSmbzR-x2Pk0';
     const { createClient } = supabase;
@@ -289,9 +328,29 @@
       await renderJogos();
     }
 
+    function toggleFase(faseId) {
+      const header = document.getElementById('fase-header-' + faseId);
+      const body = document.getElementById('fase-body-' + faseId);
+      const arrow = document.getElementById('fase-arrow-' + faseId);
+      const aberta = body.classList.contains('aberta');
+      body.classList.toggle('aberta', !aberta);
+      header.classList.toggle('aberta', !aberta);
+      arrow.classList.toggle('aberta', !aberta);
+    }
+
+    function toggleRodada(rodadaId) {
+      const header = document.getElementById('rodada-header-' + rodadaId);
+      const body = document.getElementById('rodada-body-' + rodadaId);
+      const arrow = document.getElementById('rodada-arrow-' + rodadaId);
+      const aberta = body.classList.contains('aberta');
+      body.classList.toggle('aberta', !aberta);
+      header.classList.toggle('aberta', !aberta);
+      arrow.classList.toggle('aberta', !aberta);
+    }
+
     async function renderJogos() {
       const { data: jogos, error } = await sb.schema('app_bolao').from('jogos')
-        .select('*').eq('ativo', true).order('fase').order('rodada').order('data_hora');
+        .select('*').eq('ativo', true).order('data_hora');
       if (error || !jogos) {
         document.getElementById('mainContent').innerHTML = '<div class="loading">Erro ao carregar jogos.</div>';
         return;
@@ -308,8 +367,9 @@
       const grupos = {};
       jogos.forEach(j => {
         if (!grupos[j.fase]) grupos[j.fase] = {};
-        if (!grupos[j.fase][j.rodada]) grupos[j.fase][j.rodada] = [];
-        grupos[j.fase][j.rodada].push(j);
+        const chave = j.rodada ?? 'null';
+        if (!grupos[j.fase][chave]) grupos[j.fase][chave] = [];
+        grupos[j.fase][chave].push(j);
       });
 
       const fasesOrdem = ['grupos', 'dieciseisavos', 'oitavas', 'quartas', 'semi', 'terceiro_lugar', 'final'];
@@ -317,18 +377,79 @@
 
       fasesOrdem.forEach(fase => {
         if (!grupos[fase]) return;
-        html += `<div class="fase-header">
-          <div class="fase-badge">${FASES_LABEL[fase] || fase}</div>
-          <div class="fase-line"></div>
-        </div>`;
 
-        Object.keys(grupos[fase]).sort((a, b) => a - b).forEach(rodada => {
+        // Verificar se a fase tem jogos abertos
+        const todosJogosDaFase = Object.values(grupos[fase]).flat();
+        const temAbertosNaFase = todosJogosDaFase.some(j => agora < new Date(j.data_hora));
+        const todosEncerradosNaFase = todosJogosDaFase.every(j => agora >= new Date(j.data_hora));
+        const faseAbertaInicio = temAbertosNaFase; // abre se tiver jogos futuros
+        const totalPtsFase = todosJogosDaFase.reduce((acc, j) => {
+          const p = palpiteMap[j.id];
+          return acc + (p?.pontos ?? 0);
+        }, 0);
+
+        const faseId = fase;
+        const classeHeader = faseAbertaInicio ? 'fase-accordion-header aberta' : 'fase-accordion-header';
+        const classeBody = faseAbertaInicio ? 'fase-accordion-body aberta' : 'fase-accordion-body';
+        const classeArrow = faseAbertaInicio ? 'fase-arrow aberta' : 'fase-arrow';
+
+        let resumoFase = '';
+        if (todosEncerradosNaFase) {
+          resumoFase = `${todosJogosDaFase.length} jogos · ${totalPtsFase} pts`;
+        } else if (temAbertosNaFase) {
+          const abertos = todosJogosDaFase.filter(j => agora < new Date(j.data_hora)).length;
+          resumoFase = `${abertos} jogo(s) aberto(s) para palpite`;
+        }
+
+        html += `
+        <div class="fase-accordion">
+          <div class="${classeHeader}" id="fase-header-${faseId}" onclick="toggleFase('${faseId}')">
+            <div class="fase-accordion-left">
+              <div class="fase-badge">${FASES_LABEL[fase] || fase}</div>
+              <div class="fase-resumo">${resumoFase}</div>
+            </div>
+            <div class="${classeArrow}" id="fase-arrow-${faseId}">▶</div>
+          </div>
+          <div class="${classeBody}" id="fase-body-${faseId}">
+            <div class="fase-body-inner">`;
+
+        Object.keys(grupos[fase]).sort((a, b) => Number(a) - Number(b)).forEach(rodada => {
           const jogosDaRodada = grupos[fase][rodada];
-          const rodadaId = `rodada-${fase}-${rodada}`;
-          const rodadaLabel = fase === 'grupos' ? `Rodada ${rodada}` : `Jogo ${rodada}`;
+          const rodadaId = `${fase}-${rodada}`;
+          const rodadaLabel = fase === 'grupos' ? `Rodada ${rodada}` : (rodada === 'null' ? '' : `Jogo ${rodada}`);
 
-          html += `<div class="rodada-wrap">
-            <div class="rodada-title">${rodadaLabel}</div>`;
+          const temAbertosNaRodada = jogosDaRodada.some(j => agora < new Date(j.data_hora));
+          const todosEncerradosNaRodada = jogosDaRodada.every(j => agora >= new Date(j.data_hora));
+          const rodadaAberta = temAbertosNaRodada;
+
+          const ptsDaRodada = jogosDaRodada.reduce((acc, j) => {
+            const p = palpiteMap[j.id];
+            return acc + (p?.pontos ?? 0);
+          }, 0);
+
+          let resumoRodada = '';
+          if (todosEncerradosNaRodada) {
+            resumoRodada = `${ptsDaRodada} pts acumulados`;
+          } else if (temAbertosNaRodada) {
+            const abertos = jogosDaRodada.filter(j => agora < new Date(j.data_hora)).length;
+            resumoRodada = `${abertos} aberto(s)`;
+          }
+
+          const classeRodadaHeader = rodadaAberta ? 'rodada-accordion-header aberta' : 'rodada-accordion-header';
+          const classeRodadaBody = rodadaAberta ? 'rodada-accordion-body aberta' : 'rodada-accordion-body';
+          const classeRodadaArrow = rodadaAberta ? 'rodada-arrow aberta' : 'rodada-arrow';
+
+          html += `
+            <div class="rodada-accordion">
+              <div class="${classeRodadaHeader}" id="rodada-header-${rodadaId}" onclick="toggleRodada('${rodadaId}')">
+                <div class="rodada-title">${rodadaLabel || 'Jogos'}</div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="rodada-resumo">${resumoRodada}</div>
+                  <div class="${classeRodadaArrow}" id="rodada-arrow-${rodadaId}">▶</div>
+                </div>
+              </div>
+              <div class="${classeRodadaBody}" id="rodada-body-${rodadaId}">
+                <div class="rodada-body-inner">`;
 
           jogosDaRodada.forEach(jogo => {
             const encerrado = agora >= new Date(jogo.data_hora);
@@ -374,8 +495,7 @@
             </div>`;
           });
 
-          const temAbertos = jogosDaRodada.some(j => agora < new Date(j.data_hora));
-          if (temAbertos) {
+          if (temAbertosNaRodada) {
             const jogoIds = jogosDaRodada.map(j => j.id).join(',');
             html += `<div class="rodada-footer">
               <button class="btn-salvar" onclick="salvarRodada('${jogoIds}')">
@@ -384,8 +504,10 @@
             </div>`;
           }
 
-          html += `</div>`;
+          html += `</div></div></div>`;
         });
+
+        html += `</div></div></div>`;
       });
 
       document.getElementById('mainContent').innerHTML = html || '<div class="loading">Nenhum jogo cadastrado.</div>';
@@ -402,11 +524,9 @@
       let erros = 0;
 
       for (const jogo of jogos) {
-        // Bloqueia se já passou o horário OU se o jogo foi finalizado pelo admin
         if (agora >= new Date(jogo.data_hora) || jogo.finalizado) continue;
         const pa = parseInt(document.getElementById(`pa-${jogo.id}`)?.value ?? 0);
         const pb = parseInt(document.getElementById(`pb-${jogo.id}`)?.value ?? 0);
-        // Nunca envia o campo pontos — só o admin pode definir pontuação
         const agora_iso = new Date().toISOString();
         const { error } = await sb.schema('app_bolao').from('palpites').upsert({
           usuario_id: currentUser.id,
@@ -422,7 +542,6 @@
 
       if (erros === 0) {
         showToast(`✅ ${salvos} palpite(s) salvo(s) com sucesso!`);
-        // Marca visualmente os jogos salvos
         jogoIds.forEach(id => {
           const card = document.getElementById(`jogo-${id}`);
           if (card && !card.classList.contains('encerrado')) card.classList.add('salvo');
@@ -432,29 +551,24 @@
       }
     }
 
-    // ── Fuso horário: converte para horário de Brasília (UTC-3) ─────────────
     function formatarData(iso) {
       const d = new Date(iso);
       return d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' })
         + ' às ' + d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
     }
 
-    // ── Tradução: espanhol → português brasileiro ────────────────────────────
     const TRADUCOES = {
-      // África
       'Sudáfrica': 'África do Sul', 'Marruecos': 'Marrocos', 'Argelia': 'Argélia',
       'Nigeria': 'Nigéria', 'Camerún': 'Camarões', 'Ghana': 'Gana', 'Túnez': 'Tunísia',
       'Egipto': 'Egito', 'Costa de Marfil': 'Costa do Marfim', 'Senegal': 'Senegal',
       'Mali': 'Mali', 'Congo RD': 'Congo RD', 'República Democrática del Congo': 'Congo RD',
       'RD Congo': 'Congo RD', 'Kenia': 'Quênia', 'Tanzania': 'Tanzânia',
       'Zimbabue': 'Zimbábue', 'Guinea': 'Guiné', 'Guinea Ecuatorial': 'Guiné Equatorial',
-      // Ásia
       'Corea del Sur': 'Coreia do Sul', 'Arabia Saudita': 'Arábia Saudita',
       'Irán': 'Irã', 'Japón': 'Japão', 'Australia': 'Austrália',
       'Uzbekistán': 'Uzbequistão', 'Jordania': 'Jordânia', 'Irak': 'Iraque',
       'Omán': 'Omã', 'Siria': 'Síria', 'Tailandia': 'Tailândia',
       'Indonesia': 'Indonésia', 'Filipinas': 'Filipinas',
-      // Europa
       'Alemania': 'Alemanha', 'Francia': 'França', 'España': 'Espanha',
       'Italia': 'Itália', 'Países Bajos': 'Holanda', 'Bélgica': 'Bélgica',
       'Croacia': 'Croácia', 'Serbia': 'Sérvia', 'Suiza': 'Suíça',
@@ -466,12 +580,10 @@
       'Finlandia': 'Finlândia', 'República Checa': 'República Tcheca',
       'Bosnia y Herzegovina': 'Bósnia e Herzegovina', 'Kosovo': 'Kosovo',
       'Montenegro': 'Montenegro', 'Macedonia del Norte': 'Macedônia do Norte',
-      // Américas
       'Colombia': 'Colômbia', 'Ecuador': 'Equador', 'Bolivia': 'Bolívia',
       'Paraguay': 'Paraguai', 'Uruguay': 'Uruguai', 'Haití': 'Haiti',
       'Venezuela': 'Venezuela', 'Perú': 'Peru',
       'Nueva Zelanda': 'Nova Zelândia',
-      // Já corretos em ambos os idiomas (mapeamentos de segurança)
       'Estados Unidos': 'EUA', 'United States': 'EUA', 'USA': 'EUA',
     };
 
@@ -479,19 +591,15 @@
       return TRADUCOES[nome] || nome;
     }
 
-    // ── Bandeiras por país (nome em português) ───────────────────────────────
     function getFlagEmoji(nomeOriginal) {
       const nome = traduzirNome(nomeOriginal);
       const flags = {
-        // América do Sul
         'Brasil': '🇧🇷', 'Argentina': '🇦🇷', 'Uruguai': '🇺🇾', 'Colômbia': '🇨🇴',
         'Equador': '🇪🇨', 'Venezuela': '🇻🇪', 'Chile': '🇨🇱', 'Peru': '🇵🇪',
         'Bolívia': '🇧🇴', 'Paraguai': '🇵🇾',
-        // América do Norte e Central
         'EUA': '🇺🇸', 'México': '🇲🇽', 'Canadá': '🇨🇦', 'Honduras': '🇭🇳',
         'Costa Rica': '🇨🇷', 'Panamá': '🇵🇦', 'El Salvador': '🇸🇻',
         'Jamaica': '🇯🇲', 'Guatemala': '🇬🇹', 'Haiti': '🇭🇹',
-        // Europa
         'Espanha': '🇪🇸', 'França': '🇫🇷', 'Inglaterra': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Alemanha': '🇩🇪',
         'Portugal': '🇵🇹', 'Holanda': '🇳🇱', 'Bélgica': '🇧🇪', 'Croácia': '🇭🇷',
         'Itália': '🇮🇹', 'Suíça': '🇨🇭', 'Áustria': '🇦🇹', 'Dinamarca': '🇩🇰',
@@ -501,19 +609,15 @@
         'Polônia': '🇵🇱', 'Suécia': '🇸🇪', 'Noruega': '🇳🇴', 'Finlândia': '🇫🇮',
         'Grécia': '🇬🇷', 'Bósnia e Herzegovina': '🇧🇦', 'Montenegro': '🇲🇪',
         'Macedônia do Norte': '🇲🇰', 'Kosovo': '🇽🇰', 'País de Gales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
-        // África
         'Marrocos': '🇲🇦', 'Senegal': '🇸🇳', 'Egito': '🇪🇬', 'Nigéria': '🇳🇬',
         'Camarões': '🇨🇲', 'Gana': '🇬🇭', 'África do Sul': '🇿🇦', 'Argélia': '🇩🇿',
         'Mali': '🇲🇱', 'Tunísia': '🇹🇳', 'Costa do Marfim': '🇨🇮', 'Congo RD': '🇨🇩',
         'Guiné': '🇬🇳', 'Guiné Equatorial': '🇬🇶', 'Quênia': '🇰🇪', 'Tanzânia': '🇹🇿',
         'Zimbábue': '🇿🇼', 'Cabo Verde': '🇨🇻', 'Burkina Faso': '🇧🇫',
-        // Ásia / Oceania
         'Japão': '🇯🇵', 'Coreia do Sul': '🇰🇷', 'Arábia Saudita': '🇸🇦',
         'Irã': '🇮🇷', 'Austrália': '🇦🇺', 'Qatar': '🇶🇦', 'Uzbequistão': '🇺🇿',
         'Jordânia': '🇯🇴', 'Iraque': '🇮🇶', 'Omã': '🇴🇲', 'Nova Zelândia': '🇳🇿',
         'Indonésia': '🇮🇩', 'Tailândia': '🇹🇭', 'Filipinas': '🇵🇭',
-        // Genéricos (fases eliminatórias)
-        'Classificado': '🏳️',
       };
       return flags[nome] || '🏳️';
     }
